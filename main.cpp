@@ -6,45 +6,50 @@
 // Description : Test application for randomized greedy modularity clustering
 //============================================================================
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
-#include <time.h>
+#include <ctime>
 #include <string>
 #include <fstream>
 #include <vector>
 
-#include <boost/version.hpp>
-#include <boost/foreach.hpp>
+//#include <boost/version.hpp>
 #include <boost/program_options.hpp>
 
 #include "modoptimizer.h"
 #include "graph.h"
 
+using std::ofstream;
+using std::cout;
+using std::cerr;
+using std::endl;
+
 namespace po = boost::program_options;
 
-void StoreClustering(std::string out_filename, Partition* final_clusters,
+
+void StoreClustering(string out_filename, Partition* final_clusters,
         Graph* graph) {
-    std::ofstream out(out_filename.data());
+    ofstream out(out_filename.data());
     if (!out) {
-        std::cerr << "Cannot open output file.\n";
+        cerr << "Cannot open output file.\n";
         return;
     }
-    std::vector<int> assingments(graph->get_vertex_count(), -1);
-    for (int i = 0; i < final_clusters->get_partition_vector()->size(); i++) {
-        BOOST_FOREACH(int vertex_id,
+    t_id_vector assingments(graph->get_vertex_count(), -1);
+    for (size_t i = 0; i < final_clusters->get_partition_vector()->size(); i++) {
+        for (t_id vertex_id:
                       *(final_clusters->get_partition_vector()->at(i)) ) {
             assingments[vertex_id] = i + 1;
-        }    
+        }
     }
-    for (int i = 0; i < graph->get_vertex_count(); i++)
+    for (size_t i = 0; i < graph->get_vertex_count(); i++)
         out << assingments[i] << "\n";
     out.close();
 }
 
 int main(int argc, char* argv[]) {
-    std::string filename;
-    std::string out_filename;
+    string filename;
+    string out_filename;
     int k;
     int finalk;
     int runs;
@@ -53,17 +58,17 @@ int main(int argc, char* argv[]) {
     bool adv;
     int alg;
     int seed;
-    
+
     po::options_description desc("Supported Arguments");
     desc.add_options()
             ("help", "Display this message")
-            ("file", po::value<std::string > (&filename), "input graph file")
+            ("file", po::value<string > (&filename), "input graph file")
             ("k", po::value<int>(&k)->default_value(2), "sample size of RG")
             ("finalk", po::value<int>(&finalk)->default_value(2000), "sample size for final RG step")
             ("runs", po::value<int>(&runs)->default_value(1), "number of runs from which to pick the best result")
             ("ensemblesize", po::value<int>(&ensemblesize)->default_value(-1), "size of ensemble for ensemble algorithms (-1 = ln(#vertices))")
             ("algorithm", po::value<int>(&alg)->default_value(1), "algorithm: 1: RG, 2: CGGC_RG, 3: CGGCi_RG")
-            ("outfile", po::value<std::string> (&out_filename), "file to store the detected communities")
+            ("outfile", po::value<string> (&out_filename), "file to store the detected communities")
             ("seed", po::value<int> (&seed), "seed value to initialize random number generator")
             ;
 
@@ -72,15 +77,15 @@ int main(int argc, char* argv[]) {
     po::notify(vm);
 
     if (vm.count("help")) {
-        std::cout << desc << "\n";
+        cout << desc << "\n";
         return 1;
     }
 
     if (!vm.count("file")) {
-        std::cout << "No filename given. Exit." << std::endl;
+        cout << "No filename given. Exit." << endl;
         exit(0);
     }
-    
+
     if (!vm.count("seed")) {
         time_t t;
         time(&t);
@@ -107,8 +112,8 @@ int main(int argc, char* argv[]) {
             adv = 1;
             iterative = 1;
             break;
-        default:    
-            std::cout << "Invalid parameter for '--algorithm'." << std::endl;
+        default:
+            cout << "Invalid parameter for '--algorithm'." << endl;
             exit(1);
     }
 
@@ -117,7 +122,7 @@ int main(int argc, char* argv[]) {
     double time;
     ModOptimizer gclusterer(&graph);
     start = clock();
-    if (adv) 
+    if (adv)
         gclusterer.ClusterCGGC(ensemblesize, finalk, iterative);
     else
         gclusterer.ClusterRG(k, runs);
@@ -127,7 +132,7 @@ int main(int argc, char* argv[]) {
     time = (double(end) - double(start)) / CLOCKS_PER_SEC;
 
     double Q = gclusterer.GetModularityFromClustering(&graph, final_clusters);
-    std::cout << "Q: " << Q  << "  time [sec]: "<< time << std::endl;
+    cout << "Q: " << Q  << "  time [sec]: "<< time << endl;
 
     if (vm.count("clusterfile")) {
         StoreClustering(out_filename, final_clusters, &graph);

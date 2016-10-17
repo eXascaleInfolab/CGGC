@@ -7,48 +7,43 @@
 //============================================================================
 
 
+#include <fstream>
+#include <cstring>
 #include "graph.h"
 
-#include <fstream>
-
-#include <boost/tokenizer.hpp>
-#include <boost/foreach.hpp>
-
-#define MAX_LINE_LENGTH 100
-
-using namespace std;
-using namespace boost;
+using std::ifstream;
+using std::endl;
 
 
-
-Graph::Graph(std::string filename) {
-    id_mapper_ = NULL;
+Graph::Graph(string filename)
+: vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr) {
     LoadFromFile(filename);
 }
 
-Graph::Graph(Graph* ingraph, t_id_list* vertexlist) {
-    id_mapper_ = NULL;
+Graph::Graph(Graph* ingraph, t_id_list* vertexlist)
+: vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr) {
+
     LoadSubgraph(ingraph, vertexlist);
 }
 
-Graph::Graph(int vertexcount, list<pair<int, int> >* elist) {
-    id_mapper_ = NULL;
+Graph::Graph(size_t vertexcount, t_idpair_list* elist)
+: vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr) {
     LoadFromEdgelist(vertexcount, elist);
 }
 
-int Graph::get_vertex_count() {
+size_t Graph::get_vertex_count() {
     return vertex_count_;
 }
 
-int Graph::get_edge_count() {
+size_t Graph::get_edge_count() {
     return edge_count_;
 }
 
-vector<int>* Graph::GetNeighbors(int &vertex_id) {
+t_id_vector* Graph::GetNeighbors(t_id vertex_id) {
     return neighbors_.at(vertex_id);
 }
 
-unordered_map<int, int>* Graph::get_id_mapper() {
+t_id_id_map* Graph::get_id_mapper() {
     return id_mapper_;
 }
 
@@ -57,70 +52,67 @@ unordered_map<int, int>* Graph::get_id_mapper() {
  * file must be in Pajek .net or METIS .graph file format with appropriate
  * file extension, reads only undirected, unweighted files
  */
-void Graph::LoadFromFile(std::string filename) {
+void Graph::LoadFromFile(string filename) {
     vertex_count_ = 0;
     edge_count_ = 0;
 
-    char line[255];
-    std::ifstream infile(filename.data());
+    ifstream infile(filename);
 
     if (!infile) {
-        std::cout << "Could not open file." << std::endl;
+        std::cout << "Could not open file." << endl;
     }
-    else if (filename.rfind(".graph") != std::string::npos) { // read METIS .graph file
-        char line[MAX_LINE_LENGTH];
-        infile.getline(line, MAX_LINE_LENGTH);
+    else if (filename.rfind(".graph") != string::npos) { // read METIS .graph file
+        string line;
+        getline(infile, line);
 
         char *tok;
-        tok = strtok(line, " ");
+        tok = strtok(const_cast<char*>(line.data()), " ");
         vertex_count_ = atoi(tok);
 
         for (int i = 0; i < vertex_count_; i++) {
-            std::string line;
             int from = i;
-            neighbors_.push_back(new vector<int>());
+            neighbors_.push_back(new t_id_vector());
             getline(infile, line);
 
-            char_separator<char> sep(" ");
-            tokenizer<char_separator<char> > tokens(line, sep);
-
-            BOOST_FOREACH(std::string tok, tokens) {
-                int to = atoi(tok.data()) - 1;
+            for(char* tok = strtok(const_cast<char*>(line.data()), " ")
+            ; tok != nullptr; tok = strtok(nullptr, " ")) {
+                int to = atoi(tok) - 1;
                 if (from != to) {
                     neighbors_.at(from)->push_back(to);
                     edge_count_++;
                 }
             }
         }
-        edge_count_ = edge_count_ / 2;
+        edge_count_ /= 2;
     }
-    else if (filename.rfind(".net") != std::string::npos) { // read Pajek .net file
-        infile.getline(line, 255);
+    else if (filename.rfind(".net") != string::npos) { // read Pajek .net file
+        string line;
+        getline(infile, line);
         char *tok;
-        tok = strtok(line, " "); // Skip *Vertices
-        tok = strtok(NULL, " ");
+        tok = strtok(const_cast<char*>(line.data()), " "); // Skip *Vertices
+        tok = strtok(nullptr, " ");
 
         vertex_count_ = atoi(tok); // read vertex count
 
         // read vertex degrees
         for (int i = 0; i < vertex_count_; i++) { // read vertex degree
-            infile.getline(line, 255);
-            neighbors_.push_back(new vector<int>());
+            getline(infile, line);
+            neighbors_.push_back(new t_id_vector());
         }
 
-        infile.getline(line, 255); // skip "*Edges"
+        getline(infile, line); // skip "*Edges"
 
         // read edges
-        while (infile.getline(line, 255)) {
+        while (getline(infile, line)) {
             char *tok;
 
-            tok = strtok(line, " ");
+            tok = strtok(const_cast<char*>(line.data()), " ");
             int from = atol(tok) - 1;
 
-            tok = strtok(NULL, " ");
+            tok = strtok(nullptr, " ");
             int to = atol(tok) - 1;
 
-            tok = strtok(NULL, " ");
+            tok = strtok(nullptr, " ");
 
             if (from != to) { // do not add loops
                 neighbors_.at(from)->push_back(to);
@@ -131,7 +123,7 @@ void Graph::LoadFromFile(std::string filename) {
         }
     }
     else {
-        std::cerr << "Unsupported file format. Quitting." << std::endl;
+        std::cerr << "Unsupported file format. Quitting." << endl;
         exit(1);
     }
 }
@@ -140,14 +132,13 @@ void Graph::LoadSubgraph(Graph* ingraph, t_id_list* vertexlist) {
     vertex_count_ = vertexlist->size();
     edge_count_ = 0;
 
-    typedef unordered_map<int, int> t_id_id_map;
     t_id_id_map* reverse_mapping = new t_id_id_map(); // map original_id from source graph -> new id in this graph
     id_mapper_ = new t_id_id_map(); // maps new id in this graph -> original_id from source graph
 
     // read vertex degrees
-    int i = 0;
-    BOOST_FOREACH(int original_id, *vertexlist) {
-        neighbors_.push_back(new vector<int>());
+    size_t i = 0;
+    for (t_id original_id: *vertexlist) {
+        neighbors_.push_back(new t_id_vector());
 
         t_id_id_map::value_type* rentry = new t_id_id_map::value_type(original_id, i);
         reverse_mapping->insert(*rentry);
@@ -160,11 +151,11 @@ void Graph::LoadSubgraph(Graph* ingraph, t_id_list* vertexlist) {
     }
 
     // read edges
-    BOOST_FOREACH(int vertex_id, *vertexlist) {
-        vector<int>* t_neighbors = ingraph->GetNeighbors(vertex_id);
+    for (int vertex_id: *vertexlist) {
+        t_id_vector* t_neighbors = ingraph->GetNeighbors(vertex_id);
         int from = reverse_mapping->at(vertex_id);
 
-        for (int j = 0; j < t_neighbors->size(); j++) {
+        for (size_t j = 0; j < t_neighbors->size(); j++) {
             // if edge goes to vertex outside of sub-group of vertices (vertexlist) ignore this edge
             if (reverse_mapping->find(t_neighbors->at(j)) == reverse_mapping->end())
                 continue;
@@ -178,42 +169,45 @@ void Graph::LoadSubgraph(Graph* ingraph, t_id_list* vertexlist) {
             }
         }
     }
-    
+
     delete reverse_mapping;
 }
 
-void Graph::LoadFromEdgelist(int vertexcount, list<pair<int, int> >* elist) {
+void Graph::LoadFromEdgelist(size_t vertexcount, t_idpair_list* elist) {
     this->vertex_count_ = vertexcount;
-    for (int i = 0; i < vertex_count_; i++)
-        neighbors_.push_back(new vector<int>());
+    for (size_t i = 0; i < vertex_count_; i++)
+        neighbors_.push_back(new t_id_vector());
 
     edge_count_ = 0;
-    typedef pair<int,int> t_intpair;
-    BOOST_FOREACH(t_intpair edge, *elist) {
+    typedef t_idpair t_intpair;
+    for (const t_intpair& edge: *elist) {
         this->neighbors_.at(edge.first)->push_back(edge.second);
         this->neighbors_.at(edge.second)->push_back(edge.first);
         edge_count_++;
     }
 }
 
-void recursive_visit(Graph* graph, t_id_list* cluster, int i, std::vector<bool>* visited) {
+
+typedef vector<bool>  t_bool_vector;
+
+void recursive_visit(Graph* graph, t_id_list* cluster, int i, t_bool_vector* visited) {
     if (visited->at(i))
         return;
 
     cluster->push_back(i);
     visited->at(i) = true;
-    for (int n = 0; n < graph->GetNeighbors(i)->size(); n++)
+    for (size_t n = 0; n < graph->GetNeighbors(i)->size(); n++)
         if (!visited->at(graph->GetNeighbors(i)->at(n)))
             recursive_visit(graph, cluster, graph->GetNeighbors(i)->at(n), visited);
 }
 
 Partition* Graph::GetConnectedComponents() {
-    std::vector<bool>* visited = new std::vector<bool>(this->get_vertex_count(), false);
+    t_bool_vector* visited = new t_bool_vector(this->get_vertex_count(), false);
 
-    int cc_counter = 0;
+    size_t cc_counter = 0;
     Partition* sccs = new Partition();
 
-    for (int i = 0; i < this->get_vertex_count(); i++) {
+    for (size_t i = 0; i < this->get_vertex_count(); i++) {
         if (!visited->at(i)) {
             t_id_list* new_cluster = new t_id_list();
             recursive_visit(this, new_cluster, i, visited);
@@ -230,6 +224,19 @@ Graph::~Graph() {
     for (int i = 0; i < vertex_count_; i++)
         delete neighbors_[i];
 
-    delete id_mapper_;
+    if(id_mapper_)
+        delete id_mapper_;
+    id_mapper_ = nullptr;
 }
 
+auto Graph::operator =(Graph&& gr) -> Graph&
+{
+    this->~Graph();
+    vertex_count_ = gr.vertex_count_;
+    edge_count_ = gr.edge_count_;
+    neighbors_ = move(gr.neighbors_);
+    id_mapper_ = gr.id_mapper_;
+    gr.id_mapper_ = nullptr;
+
+    return *this;
+}

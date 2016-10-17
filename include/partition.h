@@ -10,23 +10,25 @@
 #ifndef PARTITION_H
 #define	PARTITION_H
 
-#include <vector>
 #include <list>
 #include <iostream>
+#include "basetypes.h"
 
-using namespace std;
+using std::list;
+using std::ostream;
 
-typedef list<int> t_id_list;
-typedef vector<t_id_list*> t_partition;
+typedef list<t_id>  t_id_list;
+typedef vector<t_id_list*>  t_partition;
+
 
 class Partition {
 public:
-    Partition(int size = 0);
+    Partition(size_t size = 0);
     virtual ~Partition();
 
     void RemoveEmptyEntries();
-    void print(ostream file = std::cout);
-    
+    void print(ostream& file = std::cout);
+
     t_partition* get_partition_vector();
 
 private:

@@ -7,21 +7,18 @@
 //============================================================================
 
 
-#include "modoptimizer.h"
-
-#include <boost/foreach.hpp>
-
+#include <cassert>
 #include "sparseclusteringmatrix.h"
 #include "activerowset.h"
 #include "graph.h"
 #include "partition.h"
+#include "modoptimizer.h"
 
-using namespace std;
+using std::make_pair;
 
-ModOptimizer::ModOptimizer(Graph* graph) {
-    graph_ = graph;
-    clusters_ = NULL;
-}
+
+ModOptimizer::ModOptimizer(Graph* graph): graph_(graph), active_rows_(nullptr)
+    , cluster_matrix_(nullptr), clusters_(nullptr)  {}
 
 ModOptimizer::~ModOptimizer() {
     delete clusters_;
@@ -31,20 +28,20 @@ Partition* ModOptimizer::get_clusters() {
     return clusters_;
 }
 
-double ModOptimizer::ClusterRG(int k, int runs) {
-    Partition* best_partition = NULL;
+double ModOptimizer::ClusterRG(size_t k, uint16_t runs) {
+    Partition* best_partition = nullptr;
     double best_q = -1;
 
-    for (int i = 0; i < runs; i++) {
+    for (uint16_t i = 0; i < runs; i++) {
         double Q = PerformJoins(k);
         if (Q > best_q) {
             if (best_q != -1)
                 delete best_partition;
-            
+
             best_q= Q;
             best_partition = clusters_;
         }
-        else 
+        else
             delete clusters_;
     }
 
@@ -53,14 +50,13 @@ double ModOptimizer::ClusterRG(int k, int runs) {
     return best_q;
 }
 
-double ModOptimizer::ClusterCGGC(int initclusters, int restartk,
-        bool iterative) {
+void ModOptimizer::ClusterCGGC(size_t initclusters, size_t restartk, bool iterative) {
     Partition* clusterings[initclusters];
     Partition* unjoined_clusters[initclusters];
 
     ClusterRG(1, 1);
     unjoined_clusters[0] = clusters_;
-    for (int i = 1; i < initclusters; i++) {
+    for (size_t i = 1; i < initclusters; i++) {
         ClusterRG(1, 1);
         clusterings[i] = clusters_;
         unjoined_clusters[i] = CompareClusters(graph_, unjoined_clusters[i - 1],
@@ -78,7 +74,7 @@ double ModOptimizer::ClusterCGGC(int initclusters, int restartk,
 
         while ((cur_q - last_q) > 0.0001) {
             unjoined_clusters[0] = PerformJoinsRestart(graph_, tmp_clustering, 1);
-            for (int i = 1; i < initclusters; i++) {
+            for (size_t i = 1; i < initclusters; i++) {
                 clusterings[i] = PerformJoinsRestart(graph_, tmp_clustering, 1);
                 unjoined_clusters[i] = CompareClusters(graph_,
                         unjoined_clusters[i - 1], clusterings[i]);
@@ -105,45 +101,45 @@ double ModOptimizer::ClusterCGGC(int initclusters, int restartk,
     Partition* result = RefineCluster(graph_, joinrestartclusters);
     delete joinrestartclusters;
     clusters_ = result;
+    //return GetModularityFromClustering(graph_, clusters_);
 }
 
-vector<int>* ModOptimizer::GetMembershipFromPartition(Partition* partition,
-                                                     int vertex_count) {
-    vector<int>* membership = new vector<int>(vertex_count);
-    for (int i = 0; i < partition->get_partition_vector()->size(); i++) {
-        list<int>* cluster = partition->get_partition_vector()->at(i);
-        BOOST_FOREACH(int vertex_id, *cluster) {
+t_id_vector* ModOptimizer::GetMembershipFromPartition(Partition* partition
+, size_t vertex_count) {
+    t_id_vector* membership = new t_id_vector(vertex_count);
+    for (size_t i = 0; i < partition->get_partition_vector()->size(); i++) {
+        t_id_list* cluster = partition->get_partition_vector()->at(i);
+        for (t_id vertex_id: *cluster) {
             membership->at(vertex_id) = i;
         }
     }
     return membership;
 }
 
-Partition* ModOptimizer::CompareClusters(Graph* graph,
-        Partition* partition1, Partition* partition2) {
-    
-    vector<vector<int>* > maps;
-    maps.push_back(GetMembershipFromPartition(partition1, 
+Partition* ModOptimizer::CompareClusters(Graph* graph, Partition* partition1
+, Partition* partition2) {
+    vector<t_id_vector*> maps;
+    maps.push_back(GetMembershipFromPartition(partition1,
                                               graph->get_vertex_count()));
     maps.push_back(GetMembershipFromPartition(partition2,
                                               graph->get_vertex_count()));
 
     Partition* result_clustering = new Partition();
-    std::vector<bool> assigned(graph->get_vertex_count(), false);
+    vector<bool> assigned(graph->get_vertex_count(), false);
 
-    list<int>* newcluster = NULL;
-    for (int i = 0; i < partition1->get_partition_vector()->size(); i++) {
-        list<int>* cluster = partition1->get_partition_vector()->at(i);
-        BOOST_FOREACH(int vertex1, *cluster) {
+    t_id_list* newcluster = nullptr;
+    for (size_t i = 0; i < partition1->get_partition_vector()->size(); i++) {
+        t_id_list* cluster = partition1->get_partition_vector()->at(i);
+        for (t_id vertex1: *cluster) {
             if (!assigned[vertex1]) {
-                newcluster = new list<int>();
+                newcluster = new t_id_list();
                 result_clustering->get_partition_vector()->push_back(newcluster);
                 newcluster->push_back(vertex1);
                 assigned[vertex1] = true;
             } else
                 continue;
 
-            BOOST_FOREACH(int vertex2, *cluster) {
+            for (t_id vertex2: *cluster) {
                 if (!assigned[vertex2]) {
                     if (maps[1]->at(vertex1) == maps[1]->at(vertex2)) {
                         newcluster->push_back(vertex2);
@@ -157,20 +153,20 @@ Partition* ModOptimizer::CompareClusters(Graph* graph,
     return result_clustering;
 }
 
-double ModOptimizer::PerformJoins(int sample_size) {
+double ModOptimizer::PerformJoins(size_t sample_size) {
     ActiveRowSet active_rows(graph_->get_vertex_count());
     SparseClusteringMatrix cluster_matrix(graph_);
 
-    int dimension = graph_->get_vertex_count();
-    vector<pair<int, int> > joins(dimension - 1);
-    int best_step = -1;
-    double best_step_q = -1;
+    size_t dimension = graph_->get_vertex_count();
+    t_idpair_vector joins(dimension - 1);
+    size_t best_step = -1;  // Max value that means not initialized
+    double best_step_q = -1;  // Note: evaluated Q always > -0.5 > best_step_q
 
     //**********
     // calc initial Q
     //**********
     double Q = 0;
-    for (int i = 0; i < dimension; i++) {
+    for (size_t i = 0; i < dimension; i++) {
         double a_i = cluster_matrix.GetRowSum(i);
         Q -= a_i * a_i;
     }
@@ -179,9 +175,9 @@ double ModOptimizer::PerformJoins(int sample_size) {
     // perform joins
     //**********
 
-    for (int step = 0; step < graph_->get_vertex_count() - 1; step++) {
+    for (size_t step = 0; step < graph_->get_vertex_count() - 1; step++) {
 
-        int max_sample = sample_size;
+        size_t max_sample = sample_size;
         if (sample_size < graph_->get_vertex_count() / 2) {
             max_sample = 1;
         } else if (sample_size < (graph_->get_vertex_count() - 1 - step)) {
@@ -196,13 +192,13 @@ double ModOptimizer::PerformJoins(int sample_size) {
         // *******
 
         double max_delta_q = -1;
-        int join_a = -1; //  the two clusters to join
-        int join_b = -1;
+        t_index join_a = -1; //  the two clusters to join
+        t_index join_b = -1;
 
         max_delta_q = -1;
-        for (int sample_num = 0; sample_num < max_sample; sample_num++) {
+        for (size_t sample_num = 0; sample_num < max_sample; sample_num++) {
 
-            int row_num;
+            t_index row_num = -1;
             if (max_sample == graph_->get_vertex_count() - 1 - step)
                 row_num = active_rows.Get(sample_num);
             else
@@ -211,8 +207,8 @@ double ModOptimizer::PerformJoins(int sample_size) {
             t_row_value_map* sample_row = cluster_matrix.GetRow(row_num);
 
             for (t_row_value_map::iterator entry = sample_row->begin(); entry != sample_row->end(); ++entry) {
-                int column_num = entry->first;
-                double value = entry->second;
+                t_index column_num = entry->first;
+                t_value value = entry->second;
 
                 if (column_num == row_num) continue;
 
@@ -232,21 +228,21 @@ double ModOptimizer::PerformJoins(int sample_size) {
                 }
             }
 
-            if (sample_num == max_sample - 1 && max_delta_q < 0 &&
-                    max_sample < graph_->get_vertex_count() - 1 - step)
-                
-                if(max_sample < graph_->get_vertex_count()/2)
+            if (sample_num == max_sample - 1 && max_delta_q < 0
+            && max_sample < graph_->get_vertex_count() - 1 - step) {
+                if(max_sample < graph_->get_vertex_count()/2) {
                     max_sample++;
-                else {
+                } else {
                     max_sample = graph_->get_vertex_count() - 1 - step;
                     sample_num = 1;
-                }    
+                }
+            }
         }
-        
+
         // if there is no valid merge, stop merge process
         // (can only occur for unconnected graph)
-        if (join_a == -1) break; 
-                
+        if (join_a == static_cast<t_index>(-1)) break;
+
         // *******
         // execute join
         // *******
@@ -262,29 +258,30 @@ double ModOptimizer::PerformJoins(int sample_size) {
         }
     }
 
-    clusters_ = GetPartitionFromJoins(joins, best_step, NULL);
+    clusters_ = GetPartitionFromJoins(joins, best_step, nullptr);
+    assert(best_step_q > -0.5 && "PerformJoins(), modularity should E (-0.5, 1]");
     return best_step_q;
 }
 
-Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters,
-                                             int k_restart_) {
+Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters
+, size_t k_restart_) {
     SparseClusteringMatrix cluster_matrix(graph, clusters);
     ActiveRowSet active_rows(clusters);
 
-    int dimension = clusters->get_partition_vector()->size();
-    vector<pair<int, int> > joins(dimension - 1);
+    size_t dimension = clusters->get_partition_vector()->size();
+    t_idpair_vector joins(dimension - 1);
 
-    int best_step = -1;
-    double best_step_q = -1;
+    size_t best_step = -1;  // Max value that means not initialized
+    double best_step_q = -1;  // Note: evaluated Q always > -0.5 > best_step_q
 
     double modularity = 0; // not the actual start value of Q,
 
     //**********
     // perform joins
     //**********
-    for (int step = 0; step < clusters->get_partition_vector()->size() - 1; step++) {
+    for (size_t step = 0; step < clusters->get_partition_vector()->size() - 1; step++) {
 
-        int max_sample = k_restart_;
+        size_t max_sample = k_restart_;
         if (k_restart_ < (clusters->get_partition_vector()->size() - 1 - step)) {
             max_sample = k_restart_;
         } else {
@@ -295,12 +292,12 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters,
         // find join
         // *******
         double max_delta_q = -1;
-        int join_a = -1; //  the two clusters to join
-        int join_b = -1;
+        t_index join_a = -1; //  the two clusters to join
+        t_index join_b = -1;
 
         max_delta_q = -1;
-        for (int sample_num = 0; sample_num < max_sample; sample_num++) {
-            int row_num;
+        for (size_t sample_num = 0; sample_num < max_sample; sample_num++) {
+            t_index row_num;
             if (max_sample == clusters->get_partition_vector()->size() - 1 - step)
                 row_num = active_rows.Get(sample_num);
             else
@@ -310,8 +307,8 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters,
 
             for (t_row_value_map::iterator entry = sample_row->begin();
                     entry != sample_row->end(); ++entry) {
-                int column_num = entry->first;
-                double value = entry->second;
+                t_index column_num = entry->first;
+                t_value value = entry->second;
 
                 if (column_num == row_num) continue;
 
@@ -336,8 +333,8 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters,
 
         // if there is no valid merge, stop merge process
         // (can only occur for unconnected graph)
-        if (join_a == -1) break;
-        
+        if (join_a == static_cast<t_index>(-1)) break;
+
         // *******
         // execute join
         // *******
@@ -352,34 +349,32 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters,
             best_step = step;
         }
     }
+    assert(best_step_q > -0.5 && "PerformJoinsRestart(), modularity should E (-0.5, 1]");
     Partition* new_clusters = GetPartitionFromJoins(joins, best_step, clusters);
     return new_clusters;
 }
 
-Partition* ModOptimizer::GetPartitionFromJoins(
-        vector<pair<int, int> > joins,
-        const int &bestStep,
-        Partition* partial_partition) {
-    
+Partition* ModOptimizer::GetPartitionFromJoins(t_idpair_vector joins
+, const size_t bestStep, Partition* partial_partition) {
     Partition* result_partition = new Partition();
-    if (partial_partition == NULL) { // create new singleton partition
+    if (partial_partition == nullptr) { // create new singleton partition
         // Initialize clusters
-        for (int i = 0; i < graph_->get_vertex_count(); i++) {
-            list<int>* vlist = new list<int>();
+        for (size_t i = 0; i < graph_->get_vertex_count(); i++) {
+            t_id_list* vlist = new t_id_list();
             vlist->push_back(i);
             result_partition->get_partition_vector()->push_back(vlist);
         }
     } else { // rearrange input partition
         // we need to create the complete list
-        for (int i = 0; i < graph_->get_vertex_count(); i++) {
-            list<int>* vlist = new list<int>();
+        for (size_t i = 0; i < graph_->get_vertex_count(); i++) {
+            t_id_list* vlist = new t_id_list();
             result_partition->get_partition_vector()->push_back(vlist);
         }
 
-        for (int i = 0; i < partial_partition->get_partition_vector()->size(); i++) {
+        for (size_t i = 0; i < partial_partition->get_partition_vector()->size(); i++) {
             // the first element of the list determines where to put the list
-            int pos = *(partial_partition->get_partition_vector()->at(i)->begin());
-            BOOST_FOREACH(int vertex,
+            t_id pos = *(partial_partition->get_partition_vector()->at(i)->begin());
+            for (t_id vertex:
                     *(partial_partition->get_partition_vector()->at(i))) {
                 result_partition->get_partition_vector()->at(pos)->
                         push_back(vertex);
@@ -388,15 +383,15 @@ Partition* ModOptimizer::GetPartitionFromJoins(
     }
 
     //join clusters according to join list
-    for (int step = 0; step <= bestStep; step++) {
-        list<int>* list1 =
+    for (size_t step = 0; step <= bestStep; step++) {
+        t_id_list* list1 =
                 result_partition->get_partition_vector()->at(joins[step].first);
-        list<int>* list2 =
+        t_id_list* list2 =
                 result_partition->get_partition_vector()->at(joins[step].second);
 
         list1->splice(list1->end(), *list2);
         delete result_partition->get_partition_vector()->at(joins[step].second);
-        result_partition->get_partition_vector()->at(joins[step].second) = NULL;
+        result_partition->get_partition_vector()->at(joins[step].second) = nullptr;
     }
 
     result_partition->RemoveEmptyEntries();
@@ -404,25 +399,22 @@ Partition* ModOptimizer::GetPartitionFromJoins(
 }
 
 Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
-    typedef boost::unordered_map<int, int> t_id_id_mapping;
-
     clusters->RemoveEmptyEntries();
 
-    int cluster_count = clusters->get_partition_vector()->size();
-    vector<int> clusterdegree(cluster_count); // sum of degrees of all vertices of a cluster
-    vector<int> clustermap(graph->get_vertex_count()); // maps vertex_id -> cluster_id
+    size_t cluster_count = clusters->get_partition_vector()->size();
+    t_id_vector clusterdegree(cluster_count); // sum of degrees of all vertices of a cluster
+    t_id_vector clustermap(graph->get_vertex_count()); // maps vertex_id -> cluster_id
 
-    vector<t_id_id_mapping> links(graph->get_vertex_count());
-    //for (int i=0; i<)
+    vector<unordered_map<t_id, size_t>> links(graph->get_vertex_count());
 
     /*
      *   Create and fill data structure
      */
-    for (int i = 0; i < cluster_count; i++) {
-        list<int>* cluster = clusters->get_partition_vector()->at(i);
+    for (size_t i = 0; i < cluster_count; i++) {
+        t_id_list* cluster = clusters->get_partition_vector()->at(i);
 
-        int cdegree = 0;
-        BOOST_FOREACH(int vertexid, *cluster) {
+        size_t cdegree = 0;
+        for (t_id vertexid: *cluster) {
             cdegree += graph->GetNeighbors(vertexid)->size();
             clustermap[vertexid] = i;
         }
@@ -432,15 +424,15 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
 
     double edgeCount = 0;
 
-    for (int i = 0; i < graph->get_vertex_count(); i++) {
-        vector<int>* neighbors = graph->GetNeighbors(i);
-        for (int j = 0; j < neighbors->size(); j++) {
-            int neighbor_id = neighbors->at(j);
-            if (i == neighbor_id) continue;
+    for (size_t i = 0; i < graph->get_vertex_count(); i++) {
+        t_id_vector* neighbors = graph->GetNeighbors(i);
+        for (size_t j = 0; j < neighbors->size(); j++) {
+            t_id neighbor_id = neighbors->at(j);
+            if (static_cast<t_id>(i) == neighbor_id) continue;
 
-            int neighborcluster = clustermap[neighbor_id];
+            t_id neighborcluster = clustermap[neighbor_id];
 
-            int newvalue = 1;
+            size_t newvalue = 1;
             if (links[i].find(neighborcluster) != links[i].end()) {
                 newvalue += links[i][neighborcluster];
             }
@@ -455,21 +447,21 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
      *   Calculate and execute vertex moves
      */
     bool improvement_found = true;
-    int movecount = 0;
+    size_t movecount = 0;
     double sum_delta_q = 0.0;
     while (improvement_found) {
         improvement_found = false;
-        for (int vertex_id = 0; vertex_id < graph->get_vertex_count(); vertex_id++) {
+        for (size_t vertex_id = 0; vertex_id < graph->get_vertex_count(); vertex_id++) {
 
-            int best_move_cluster = -1;
+            t_id best_move_cluster = -1;  // Max value, means not initialized
             double bestDeltaQ = 0;
 
-            int current_cluster_id = clustermap[vertex_id];
+            t_id current_cluster_id = clustermap[vertex_id];
 
             // for all adjacent clusters of the cluster of vertexid
-            for (t_id_id_mapping::iterator iter = links[vertex_id].begin();
+            for (auto iter = links[vertex_id].begin();
                     iter != links[vertex_id].end(); ++iter) {
-                int cluster_id = iter->first;
+                t_id cluster_id = iter->first;
 
                 if (current_cluster_id == cluster_id) continue;
 
@@ -493,14 +485,16 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
 
             // move vertex
             if (bestDeltaQ > 0) {
+                assert(best_move_cluster != -1
+                    && "RefineCluster(), best_move_cluster should be initialized");
                 sum_delta_q += bestDeltaQ;
                 clusterdegree[current_cluster_id] -=
                         graph->GetNeighbors(vertex_id)->size();
                 clusterdegree[best_move_cluster] +=
                         graph->GetNeighbors(vertex_id)->size();
 
-                for (int i = 0; i < graph->GetNeighbors(vertex_id)->size(); i++) {
-                    int neighborid = graph->GetNeighbors(vertex_id)->at(i);
+                for (size_t i = 0; i < graph->GetNeighbors(vertex_id)->size(); i++) {
+                    t_id neighborid = graph->GetNeighbors(vertex_id)->at(i);
 
                     links[neighborid][current_cluster_id]--;
                     if (links[neighborid].find(best_move_cluster) !=
@@ -518,9 +512,9 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
     }
 
     Partition* resultclusters = new Partition(cluster_count);
-    for (int i = 0; i < graph->get_vertex_count(); i++) {
-        int x = clustermap[i];
-        list<int>* cluster = resultclusters->get_partition_vector()->at(x);
+    for (size_t i = 0; i < graph->get_vertex_count(); i++) {
+        t_id x = clustermap[i];
+        t_id_list* cluster = resultclusters->get_partition_vector()->at(x);
         cluster->push_back(i);
     }
 
@@ -529,62 +523,60 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
 
 double ModOptimizer::GetModularityFromClustering(Graph* graph,
         Partition* clusters) {
-    int cluster_count = clusters->get_partition_vector()->size();
+    size_t cluster_count = clusters->get_partition_vector()->size();
 
-    vector<int> clustermap (graph->get_vertex_count()); // maps vertex_id -> cluster_id
-    for (int i = 0; i < cluster_count; i++) {
-        list<int>* cluster = clusters->get_partition_vector()->at(i);
-        int csize = 0;
-        BOOST_FOREACH (int vertex_id, *cluster) {    
+    t_id_vector clustermap (graph->get_vertex_count()); // maps vertex_id -> cluster_id
+    for (size_t i = 0; i < cluster_count; i++) {
+        t_id_list* cluster = clusters->get_partition_vector()->at(i);
+        size_t csize = 0;
+        for (t_id vertex_id: *cluster) {
             clustermap[vertex_id] = i;
             csize++;
         }
     }
 
-    typedef boost::unordered_map<int,double> t_sparse_row_vector;
-    typedef vector<t_sparse_row_vector*> t_sparse_matrix;
+    typedef vector<t_row_value_map*> t_sparse_matrix;
 
     t_sparse_matrix e;
-    for (int i = 0; i < cluster_count; i++)
-        e.push_back(new t_sparse_row_vector());
+    for (size_t i = 0; i < cluster_count; i++)
+        e.push_back(new t_row_value_map());
 
-    int edge_count = 0; // will be 2*|E|
-    for (int i = 0; i < graph->get_vertex_count(); i++) {
-        vector<int>* neighbors = graph->GetNeighbors(i);
-        for (int j = 0; j < neighbors->size(); j++) {
-            if (i == neighbors->at(j)) continue; // disregard loops
+    size_t edge_count = 0; // will be 2*|E|
+    for (size_t i = 0; i < graph->get_vertex_count(); i++) {
+        t_id_vector* neighbors = graph->GetNeighbors(i);
+        for (size_t j = 0; j < neighbors->size(); j++) {
+            if (static_cast<t_id>(i) == neighbors->at(j)) continue; // disregard loops
 
-            int from = clustermap[i];
-            int to = clustermap[neighbors->at(j)];
-	    if (e[from]->find(to) != e[from]->end())	            
-		e[from]->at(to) += 1.0;
-	    else
-		e[from]->insert(make_pair(to,1.0));	
+            t_id from = clustermap[i];
+            t_id to = clustermap[neighbors->at(j)];
+            if (e[from]->find(to) != e[from]->end())
+                e[from]->at(to) += 1.0;
+            else e[from]->insert(make_pair(to,1.0));
 
             edge_count++;
         }
     }
 
-    vector<double> a(cluster_count);
-    for (int i = 0; i < cluster_count; i++) {
+    vector<t_value> a(cluster_count);
+    for (size_t i = 0; i < cluster_count; i++) {
         a[i] = 0.0;
 
-    	for (t_sparse_row_vector::iterator iter = e[i]->begin();
-                iter != e[i]->end(); ++iter) {    
-            int column = iter->first;
-            e[i]->at(column) /= (double) edge_count;
+    	for (t_row_value_map::iterator iter = e[i]->begin();
+                iter != e[i]->end(); ++iter) {
+            t_index column = iter->first;
+            e[i]->at(column) /= static_cast<t_value>(edge_count);
             a[i] += e[i]->at(column);
         }
     }
 
     double Q = 0.0;
-    for (int i = 0; i < cluster_count; i++)
+    for (size_t i = 0; i < cluster_count; i++)
 	if (e[i]->find(i) != e[i]->end())
         	Q += e[i]->at(i) - a[i] * a[i];
 	else
 		Q += 0 - a[i] * a[i];
 
-    for (int i = 0; i < e.size(); i++)
+    for (size_t i = 0; i < e.size(); i++)
         delete e[i];
 
     return Q;
