@@ -179,7 +179,7 @@ void Graph::LoadFromFile(string filename) {
                     raiseError(MSG_CONVERSION_FAILED, tok);
                 // Id of the vertices >= 1 by specification, but internally we store from if = 0
                 if(to < 1)
-                    throw domain_error("Id validation failed (Metis specifies vertex id >= 1)");
+                    throw domain_error("Id validation failed (Metis specifies vertex id >= 1)\n");
                 to -= 1;
                 if (from != to) {
                     neighbors_.at(from)->push_back(to);
@@ -197,7 +197,9 @@ void Graph::LoadFromFile(string filename) {
     }
     else if (filename.rfind(".net") != string::npos) { // read Pajek .net file
         fputs("ERROR: Pajek format is not implemented\n", stderr);
-        throw domain_error("Not implemented");
+        throw domain_error("Not implemented\n");
+        // Note: Below only some specially formated Pajek files are parsed well,
+        // the implementation below is error-prone for the general Pajek format.
 
         string line;
         getline(infile, line);
@@ -244,10 +246,7 @@ void Graph::LoadFromFile(string filename) {
             }
         }
     }
-    else {
-        std::cerr << "Unsupported file format. Quitting." << endl;
-        exit(1);
-    }
+    else throw domain_error("Unsupported file format\n");
 }
 
 void Graph::LoadSubgraph(Graph* ingraph, t_id_list* vertexlist) {
