@@ -27,7 +27,9 @@ namespace po = boost::program_options;
 
 
 void StoreClustering(string out_filename, Partition* final_clusters, Graph* graph) {
-    cout << "Saving resulting clustering in the " << out_filename << endl;
+#ifdef DEBUG
+    cout << ">> Saving resulting clustering to the " << out_filename << endl;
+#endif // DEBUG
     ofstream out(out_filename.data());
     if (!out) {
         cerr << "Cannot open output file.\n";
@@ -142,7 +144,7 @@ int main(int argc, char* argv[]) {
     double Q = gclusterer.GetModularityFromClustering(&graph, final_clusters);
     cout << "Q: " << Q  << "  time [sec]: "<< time << endl;
 
-    if (vm.count("clusterfile"))
+    if (vm.count("outfile"))
         StoreClustering(out_filename, final_clusters, &graph);
 }
 
