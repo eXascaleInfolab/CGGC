@@ -1,4 +1,8 @@
+obj/
 build/
+bin/
 dist/
 nbproject/
 .dep.inc
+*.depend
+*.layout
