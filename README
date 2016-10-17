@@ -1,0 +1,73 @@
+Implementation of the Randomized Greedy (RG) modularity clustering algorithm
+and the use of RG in the CGGC/CGGCi scheme.
+
+The Paper: "An Ensemble Learning Strategy for Graph Clustering" by
+Michael Ovelgönne and Andreas Geyer-Schulz at Graph Partitioning and
+Graph Clustering, Contemporary Mathematics, American Mathematical
+Society, 2013
+Winner of modularity maximization and modularity pareto (time + quality)
+challenges, 10th DIMACS Implementation Challenge
+
+http://www.umiacs.umd.edu/~mov/
+
+-- DISCLAIMER -------------------------------------------------
+Copyright 2009-2012 Michael Ovelgönne and Karlsruhe Institute of Technology
+
+This is experimental code. Please use it with caution.
+The software is provided "as is" and is free for academic and non-profit use. 
+This software or any part of it must not be distributed without
+prior written agreement of the copyright holders.
+
+-- Reference -------------------------------------------------
+This is a slightly altered and cleaned-up version of the code used for the
+10th DIMACS Implementation Challenge. 
+
+Reference:
+An Ensemble Learning Strategy for Graph Clustering,
+Michael Ovelgönne and Andreas Geyer-Schulz,
+10th DIMACS Implementation Challenge - Graph Partitioning and Graph Clustering, 2012
+http://www.cc.gatech.edu/dimacs10/papers/%5B18%5D-dimacs10_ovelgoennegeyerschulz.pdf
+
+-- Contact ---------------------------------------------------
+Michael Ovelgönne 
+mov -a-t- umiacs.umd.edu
+
+If you have questions or if you encountered bugs, please send an e-mail.
+
+-- Prerequisites ---------------------------------------------
+1. Boost libraries (http://www.boost.org/) 
+The code has been tested with Boost version 1.42.
+Debian/Ubuntu users can run "sudo apt-get install libboost-all-dev"
+
+2. Make
+only needed, if you want to use the makefile
+
+-- Build ------------------------------------------------------
+The source code comes with a makefile. Run make to build the program.
+Compiler/Linker errors are most likely due to incorrect 
+settings of include and lib paths.  
+
+
+-- Run --------------------------------------------------------
+Run rgmc with the following parameters:
+  --file arg               input graph file
+  --k arg (=2)             sample size of RG
+  --finalk arg (=2000)     sample size for final RG step
+  --runs arg (=1)          number of RG runs from which to pick the best result
+  --ensemblesize arg (=-1) size of ensemble for ensemble algorithms (-1 = 
+                           ln(#vertices))
+  --algorithm arg (=1)     algorithm: 1: RG, 2: CGGC_RG, 3: CGGCi_RG
+  --outfile arg            file to store the detected communities
+  --seed arg               seed value to initialize random number generator
+
+
+Example:
+
+rgmc --file=test.graph --algorithm=3 --outfile=test.out
+runs the CGGCi_RG algorithm on the graph test.graph and writes the results to
+test.out
+
+-- Output format ---------------------------------------------------
+If the parameter clusterfile is set, the output is a text file with one row per
+vertex in the graph. The i-th row gives the id of the cluster the i-th vertex
+belongs to.
