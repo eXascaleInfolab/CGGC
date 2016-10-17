@@ -40,9 +40,9 @@ OBJDIR_RELEASE = obj/Release
 DEP_RELEASE = 
 OUT_RELEASE = bin/Release/rgmc
 
-OBJ_DEBUG = $(OBJDIR_DEBUG)/activerowset.o $(OBJDIR_DEBUG)/graph.o $(OBJDIR_DEBUG)/main.o $(OBJDIR_DEBUG)/modoptimizer.o $(OBJDIR_DEBUG)/partition.o $(OBJDIR_DEBUG)/sparseclusteringmatrix.o
+OBJ_DEBUG = $(OBJDIR_DEBUG)/main.o $(OBJDIR_DEBUG)/src/activerowset.o $(OBJDIR_DEBUG)/src/graph.o $(OBJDIR_DEBUG)/src/modoptimizer.o $(OBJDIR_DEBUG)/src/partition.o $(OBJDIR_DEBUG)/src/sparseclusteringmatrix.o
 
-OBJ_RELEASE = $(OBJDIR_RELEASE)/activerowset.o $(OBJDIR_RELEASE)/graph.o $(OBJDIR_RELEASE)/main.o $(OBJDIR_RELEASE)/modoptimizer.o $(OBJDIR_RELEASE)/partition.o $(OBJDIR_RELEASE)/sparseclusteringmatrix.o
+OBJ_RELEASE = $(OBJDIR_RELEASE)/main.o $(OBJDIR_RELEASE)/src/activerowset.o $(OBJDIR_RELEASE)/src/graph.o $(OBJDIR_RELEASE)/src/modoptimizer.o $(OBJDIR_RELEASE)/src/partition.o $(OBJDIR_RELEASE)/src/sparseclusteringmatrix.o
 
 all: debug release
 
@@ -51,6 +51,7 @@ clean: clean_debug clean_release
 before_debug: 
 	test -d bin/Debug || mkdir -p bin/Debug
 	test -d $(OBJDIR_DEBUG) || mkdir -p $(OBJDIR_DEBUG)
+	test -d $(OBJDIR_DEBUG)/src || mkdir -p $(OBJDIR_DEBUG)/src
 
 after_debug: 
 
@@ -59,32 +60,34 @@ debug: before_debug out_debug after_debug
 out_debug: before_debug $(OBJ_DEBUG) $(DEP_DEBUG)
 	$(LD) $(LIBDIR_DEBUG) -o $(OUT_DEBUG) $(OBJ_DEBUG)  $(LDFLAGS_DEBUG) $(LIB_DEBUG)
 
-$(OBJDIR_DEBUG)/activerowset.o: activerowset.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c activerowset.cpp -o $(OBJDIR_DEBUG)/activerowset.o
-
-$(OBJDIR_DEBUG)/graph.o: graph.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c graph.cpp -o $(OBJDIR_DEBUG)/graph.o
-
 $(OBJDIR_DEBUG)/main.o: main.cpp
 	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c main.cpp -o $(OBJDIR_DEBUG)/main.o
 
-$(OBJDIR_DEBUG)/modoptimizer.o: modoptimizer.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c modoptimizer.cpp -o $(OBJDIR_DEBUG)/modoptimizer.o
+$(OBJDIR_DEBUG)/src/activerowset.o: src/activerowset.cpp
+	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c src/activerowset.cpp -o $(OBJDIR_DEBUG)/src/activerowset.o
 
-$(OBJDIR_DEBUG)/partition.o: partition.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c partition.cpp -o $(OBJDIR_DEBUG)/partition.o
+$(OBJDIR_DEBUG)/src/graph.o: src/graph.cpp
+	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c src/graph.cpp -o $(OBJDIR_DEBUG)/src/graph.o
 
-$(OBJDIR_DEBUG)/sparseclusteringmatrix.o: sparseclusteringmatrix.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c sparseclusteringmatrix.cpp -o $(OBJDIR_DEBUG)/sparseclusteringmatrix.o
+$(OBJDIR_DEBUG)/src/modoptimizer.o: src/modoptimizer.cpp
+	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c src/modoptimizer.cpp -o $(OBJDIR_DEBUG)/src/modoptimizer.o
+
+$(OBJDIR_DEBUG)/src/partition.o: src/partition.cpp
+	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c src/partition.cpp -o $(OBJDIR_DEBUG)/src/partition.o
+
+$(OBJDIR_DEBUG)/src/sparseclusteringmatrix.o: src/sparseclusteringmatrix.cpp
+	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c src/sparseclusteringmatrix.cpp -o $(OBJDIR_DEBUG)/src/sparseclusteringmatrix.o
 
 clean_debug: 
 	rm -f $(OBJ_DEBUG) $(OUT_DEBUG)
 	rm -rf bin/Debug
 	rm -rf $(OBJDIR_DEBUG)
+	rm -rf $(OBJDIR_DEBUG)/src
 
 before_release: 
 	test -d bin/Release || mkdir -p bin/Release
 	test -d $(OBJDIR_RELEASE) || mkdir -p $(OBJDIR_RELEASE)
+	test -d $(OBJDIR_RELEASE)/src || mkdir -p $(OBJDIR_RELEASE)/src
 
 after_release: 
 
@@ -93,28 +96,29 @@ release: before_release out_release after_release
 out_release: before_release $(OBJ_RELEASE) $(DEP_RELEASE)
 	$(LD) $(LIBDIR_RELEASE) -o $(OUT_RELEASE) $(OBJ_RELEASE)  $(LDFLAGS_RELEASE) $(LIB_RELEASE)
 
-$(OBJDIR_RELEASE)/activerowset.o: activerowset.cpp
-	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c activerowset.cpp -o $(OBJDIR_RELEASE)/activerowset.o
-
-$(OBJDIR_RELEASE)/graph.o: graph.cpp
-	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c graph.cpp -o $(OBJDIR_RELEASE)/graph.o
-
 $(OBJDIR_RELEASE)/main.o: main.cpp
 	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c main.cpp -o $(OBJDIR_RELEASE)/main.o
 
-$(OBJDIR_RELEASE)/modoptimizer.o: modoptimizer.cpp
-	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c modoptimizer.cpp -o $(OBJDIR_RELEASE)/modoptimizer.o
+$(OBJDIR_RELEASE)/src/activerowset.o: src/activerowset.cpp
+	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c src/activerowset.cpp -o $(OBJDIR_RELEASE)/src/activerowset.o
 
-$(OBJDIR_RELEASE)/partition.o: partition.cpp
-	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c partition.cpp -o $(OBJDIR_RELEASE)/partition.o
+$(OBJDIR_RELEASE)/src/graph.o: src/graph.cpp
+	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c src/graph.cpp -o $(OBJDIR_RELEASE)/src/graph.o
 
-$(OBJDIR_RELEASE)/sparseclusteringmatrix.o: sparseclusteringmatrix.cpp
-	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c sparseclusteringmatrix.cpp -o $(OBJDIR_RELEASE)/sparseclusteringmatrix.o
+$(OBJDIR_RELEASE)/src/modoptimizer.o: src/modoptimizer.cpp
+	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c src/modoptimizer.cpp -o $(OBJDIR_RELEASE)/src/modoptimizer.o
+
+$(OBJDIR_RELEASE)/src/partition.o: src/partition.cpp
+	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c src/partition.cpp -o $(OBJDIR_RELEASE)/src/partition.o
+
+$(OBJDIR_RELEASE)/src/sparseclusteringmatrix.o: src/sparseclusteringmatrix.cpp
+	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c src/sparseclusteringmatrix.cpp -o $(OBJDIR_RELEASE)/src/sparseclusteringmatrix.o
 
 clean_release: 
 	rm -f $(OBJ_RELEASE) $(OUT_RELEASE)
 	rm -rf bin/Release
 	rm -rf $(OBJDIR_RELEASE)
+	rm -rf $(OBJDIR_RELEASE)/src
 
 .PHONY: before_debug after_debug clean_debug before_release after_release clean_release
 

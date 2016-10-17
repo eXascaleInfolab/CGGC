@@ -51,6 +51,8 @@
 		<Linker>
 			<Add library="boost_program_options" />
 		</Linker>
+		<Unit filename="activerowset.cpp" />
+		<Unit filename="graph.cpp" />
 		<Unit filename="include/activerowset.h" />
 		<Unit filename="include/basetypes.h" />
 		<Unit filename="include/graph.h" />
@@ -58,11 +60,9 @@
 		<Unit filename="include/partition.h" />
 		<Unit filename="include/sparseclusteringmatrix.h" />
 		<Unit filename="main.cpp" />
-		<Unit filename="src/activerowset.cpp" />
-		<Unit filename="src/graph.cpp" />
-		<Unit filename="src/modoptimizer.cpp" />
-		<Unit filename="src/partition.cpp" />
-		<Unit filename="src/sparseclusteringmatrix.cpp" />
+		<Unit filename="modoptimizer.cpp" />
+		<Unit filename="partition.cpp" />
+		<Unit filename="sparseclusteringmatrix.cpp" />
 		<Extensions>
 			<DoxyBlocks>
 				<comment_style block="1" line="1" />
