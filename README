@@ -10,6 +10,14 @@ challenges, 10th DIMACS Implementation Challenge
 
 http://www.umiacs.umd.edu/~mov/
 
+NOTE: the original rgmc clustering (algorithms: RG, CGGC_RG, CGGCi_RG)
+did not output resulting clusters. This is a modified version that fixes
+this bug and outputs clusters to be able to compare them against the
+ground-truth.
+This is a significantly refactored version with updated I/O (full support of
+the official Metis format of the input graph), but untouched original
+clustering algorithm(s).
+
 -- DISCLAIMER -------------------------------------------------
 Copyright 2009-2012 Michael Ovelgönne and Karlsruhe Institute of Technology
 
@@ -58,16 +66,15 @@ Run rgmc with the following parameters:
                            ln(#vertices))
   --algorithm arg (=1)     algorithm: 1: RG, 2: CGGC_RG, 3: CGGCi_RG
   --outfile arg            file to store the detected communities
+  --outfmt {c, v}          output file format, default: c:
+    c  - each line contains unwrapped clusters, i.e. list of the member vertices (ids)
+    v  - each lie corresponds to the vertex and contains it's owner cluster (id)
   --seed arg               seed value to initialize random number generator
 
 
 Example:
 
-rgmc --file=test.graph --algorithm=3 --outfile=test.out
+$ rgmc --file=test.graph --algorithm=3 --outfile=test.out
 runs the CGGCi_RG algorithm on the graph test.graph and writes the results to
 test.out
-
--- Output format ---------------------------------------------------
-If the parameter clusterfile is set, the output is a text file with one row per
-vertex in the graph. The i-th row gives the id of the cluster the i-th vertex
-belongs to.
+$ rgmc --file=email.graph
