@@ -6,8 +6,6 @@
 // Description : Test application for randomized greedy modularity clustering
 //============================================================================
 
-#include <cstdio>
-#include <cstdlib>
 #include <iostream>
 #include <ctime>
 #include <string>
@@ -28,20 +26,17 @@ using std::endl;
 namespace po = boost::program_options;
 
 
-void StoreClustering(string out_filename, Partition* final_clusters,
-        Graph* graph) {
+void StoreClustering(string out_filename, Partition* final_clusters, Graph* graph) {
+    cout << "Saving resulting clustering in the " << out_filename << endl;
     ofstream out(out_filename.data());
     if (!out) {
         cerr << "Cannot open output file.\n";
         return;
     }
     t_id_vector assingments(graph->get_vertex_count(), -1);
-    for (size_t i = 0; i < final_clusters->get_partition_vector()->size(); i++) {
-        for (t_id vertex_id:
-                      *(final_clusters->get_partition_vector()->at(i)) ) {
+    for (size_t i = 0; i < final_clusters->get_partition_vector()->size(); i++)
+        for (t_id vertex_id: *(final_clusters->get_partition_vector()->at(i)))
             assingments[vertex_id] = i + 1;
-        }
-    }
     for (size_t i = 0; i < graph->get_vertex_count(); i++)
         out << assingments[i] << "\n";
     out.close();
@@ -120,12 +115,25 @@ int main(int argc, char* argv[]) {
 
     clock_t start, end;
     double time;
+#ifdef DEBUG
+    cerr << "> Starting ModOptimizer\n";
+#endif // DEBUG
     ModOptimizer gclusterer(&graph);
     start = clock();
-    if (adv)
+    if (adv) {
+#ifdef DEBUG
+        cout << "> Starting CGGC clustering\n";
+#endif // DEBUG
         gclusterer.ClusterCGGC(ensemblesize, finalk, iterative);
-    else
+    } else {
+#ifdef DEBUG
+        cout << "> Starting RG clustering\n";
+#endif // DEBUG
         gclusterer.ClusterRG(k, runs);
+    }
+#ifdef DEBUG
+        cout << "> The clustering is completed\n";
+#endif // DEBUG
     Partition* final_clusters = gclusterer.get_clusters();
 
     end = clock();
@@ -134,8 +142,7 @@ int main(int argc, char* argv[]) {
     double Q = gclusterer.GetModularityFromClustering(&graph, final_clusters);
     cout << "Q: " << Q  << "  time [sec]: "<< time << endl;
 
-    if (vm.count("clusterfile")) {
+    if (vm.count("clusterfile"))
         StoreClustering(out_filename, final_clusters, &graph);
-    }
 }
 

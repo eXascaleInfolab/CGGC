@@ -9,10 +9,17 @@
 
 #include <fstream>
 #include <cstring>
+#include <cstdlib>  // atoi, strtoul
+#include <cstdio>  // perror
+#include <cerrno>  // errno
+#include <system_error>
+#include <stdexcept>
 #include "graph.h"
 
 using std::ifstream;
 using std::endl;
+using std::system_error;
+using std::domain_error;
 
 
 Graph::Graph(string filename)
@@ -47,14 +54,38 @@ t_id_id_map* Graph::get_id_mapper() {
     return id_mapper_;
 }
 
+
+//! \brief Print the error and throws exception
+//!
+//! \param msg=nullptr const char*  - operation-related message to be shown
+//! \param origin=nullptr const char*  - origin, i.e. the value that caused the error
+void raiseError(const char* msg=nullptr, const char* origin=nullptr) {
+    string comment = "ERROR";
+    if(msg || origin) {
+        comment += ", ";
+        if(msg) {
+            comment += msg;
+            if(origin)
+                comment.append(" ").append(origin);
+        } else comment += origin;
+    }
+    //comment.append(": ") += strerror(errno);
+    perror(comment.c_str());
+    throw system_error(errno, std::system_category());
+}
+
 /*
  * loads undirected graph from file
  * file must be in Pajek .net or METIS .graph file format with appropriate
  * file extension, reads only undirected, unweighted files
  */
 void Graph::LoadFromFile(string filename) {
+#ifdef DEBUG
+    std::cout << ">> LoadFromFile(), loading the graph from " << filename << endl;
+#endif // DEBUG
     vertex_count_ = 0;
     edge_count_ = 0;
+    constexpr char MSG_CONVERSION_FAILED[] = "Value conversion failed of the parsed text";
 
     ifstream infile(filename);
 
@@ -62,40 +93,125 @@ void Graph::LoadFromFile(string filename) {
         std::cout << "Could not open file." << endl;
     }
     else if (filename.rfind(".graph") != string::npos) { // read METIS .graph file
+        // Metis format of the input graph (.graph):
+        // % Comments are marked with '%' symbol
+        // % Header:
+        // <vertices_num> <endges_num> [<format_bin> [vwnum]]
+        // % Body, vertices_num lines without the comments:
+        // [vsize] [vweight_1 .. vweight_vwnum] vid1 [eweight1]  vid2 [eweight2] ...
+        // ...
+        //
+        // where:
+        //  vertices_num  - the number of vertices in the network (graph)
+        //  endges_num  - the number of edges (not directed, A-B and B-A counted
+        //      as a single edge)
+        //  format_bin - up to 3 digits {0, 1}: <vsized><vweighted><eweighted>
+        //      vsized  - whether the size of each vertex is specified (vsize)
+        //      vweighted  - whether the vertex weights are specified (vweight_1 .. vweight_vmnum)
+        //      eweighted  - whether edges weights are specified eweight<i>
+        //  vm_num  - the number of weights in each vertex (not the same as the number of edges)
+        //
+        // vsize  - size of the vertex, integer >= 0. NOTE: doe not used normally
+        // vweight  - weight the vertex, integer >= 0
+        // vid  - vertex id, integer >= 1. ATTENTION: can't be equal to 0
+        // eweight  - edge weight, integer >= 1
+
         string line;
-        getline(infile, line);
 
+        // Read the header skipping the comments '%' and empty lines
         char *tok;
-        tok = strtok(const_cast<char*>(line.data()), " ");
-        vertex_count_ = atoi(tok);
+        bool eweighted = false;
+        size_t vweights = 0;  // vmnum
+        bool vsized = false;
+        while(getline(infile, line)) {
+            // Skip comments starting with '%' and empty strings
+            tok = strtok(const_cast<char*>(line.data()), " ");  // The number of nodes
+            if(!tok || tok[0] == '%')
+                continue;
 
-        for (int i = 0; i < vertex_count_; i++) {
-            int from = i;
+            // Parse the header
+            errno = 0;
+            vertex_count_ = strtoul(tok, nullptr, 10);
+            if(errno)
+                raiseError(MSG_CONVERSION_FAILED, tok);
+
+            tok = strtok(nullptr, " ");  // The number of edges (not directed)
+            if(tok)
+                tok = strtok(nullptr, " ");  // Weights of nodes and links in binary format: 011
+            errno = 0;
+            const unsigned format = tok ? strtoul(tok, nullptr, 2) : 0;
+            if(errno)
+                raiseError(MSG_CONVERSION_FAILED, tok);
+            eweighted = format & 0b1;
+            vweights = format & 0b10;
+            vsized = format & 0b100;
+
+            // Read vwnum if requried
+            if(tok && vweights)
+                tok = strtok(nullptr, " ");
+            vweights = strtoul(tok, nullptr, 10);
+            if(errno)
+                raiseError(MSG_CONVERSION_FAILED, tok);
+            break;
+        }
+
+        // Parse body
+        t_id  from = 0;  // Currently loading vertex id
+        while(getline(infile, line)) {
+            // Skip comments starting with '%' and empty strings
+            tok = strtok(const_cast<char*>(line.data()), " ");  // The number of nodes
+            if(!tok || tok[0] == '%')
+                continue;
+
+            // Skip vertex size
+            if(vsized)
+                strtok(nullptr, " ");
+            // Skip vertex weights
+            if(vweights)
+                for(size_t i = 0; tok && i < vweights; tok = strtok(nullptr, " "));
+
+            // Parse vertices and their weights
             neighbors_.push_back(new t_id_vector());
-            getline(infile, line);
-
-            for(char* tok = strtok(const_cast<char*>(line.data()), " ")
-            ; tok != nullptr; tok = strtok(nullptr, " ")) {
-                int to = atoi(tok) - 1;
+            for(; tok != nullptr; tok = strtok(nullptr, " ")) {
+                errno = 0;
+                t_id to = strtoul(tok, nullptr, 10);
+                if(errno)
+                    raiseError(MSG_CONVERSION_FAILED, tok);
+                // Id of the vertices >= 1 by specification, but internally we store from if = 0
+                if(to < 1)
+                    throw domain_error("Id validation failed (Metis specifies vertex id >= 1)");
+                to -= 1;
                 if (from != to) {
                     neighbors_.at(from)->push_back(to);
                     edge_count_++;
                 }
+
+                // Read and skip weight if required, because this algorithm supports
+                // only unweighted input networks
+                if(eweighted && !strtok(nullptr, " "))
+                    break;
             }
+            ++from;
         }
         edge_count_ /= 2;
     }
     else if (filename.rfind(".net") != string::npos) { // read Pajek .net file
+        fputs("ERROR: Pajek format is not implemented\n", stderr);
+        throw domain_error("Not implemented");
+
         string line;
         getline(infile, line);
         char *tok;
         tok = strtok(const_cast<char*>(line.data()), " "); // Skip *Vertices
         tok = strtok(nullptr, " ");
 
-        vertex_count_ = atoi(tok); // read vertex count
+        errno = 0;
+        vertex_count_ = strtoul(tok, nullptr, 10); // read vertex count
+        if(errno)
+            raiseError(MSG_CONVERSION_FAILED, tok);
 
         // read vertex degrees
-        for (int i = 0; i < vertex_count_; i++) { // read vertex degree
+        for (size_t i = 0; i < vertex_count_; i++) { // read vertex degree
             getline(infile, line);
             neighbors_.push_back(new t_id_vector());
         }
@@ -107,10 +223,16 @@ void Graph::LoadFromFile(string filename) {
             char *tok;
 
             tok = strtok(const_cast<char*>(line.data()), " ");
-            int from = atol(tok) - 1;
+            errno = 0;
+            t_id from = atol(tok) - 1;
+            if(errno)
+                raiseError(MSG_CONVERSION_FAILED, tok);
 
             tok = strtok(nullptr, " ");
-            int to = atol(tok) - 1;
+            errno = 0;
+            t_id to = atol(tok) - 1;
+            if(errno)
+                raiseError(MSG_CONVERSION_FAILED, tok);
 
             tok = strtok(nullptr, " ");
 
@@ -151,16 +273,16 @@ void Graph::LoadSubgraph(Graph* ingraph, t_id_list* vertexlist) {
     }
 
     // read edges
-    for (int vertex_id: *vertexlist) {
+    for (t_id vertex_id: *vertexlist) {
         t_id_vector* t_neighbors = ingraph->GetNeighbors(vertex_id);
-        int from = reverse_mapping->at(vertex_id);
+        t_id from = reverse_mapping->at(vertex_id);
 
         for (size_t j = 0; j < t_neighbors->size(); j++) {
             // if edge goes to vertex outside of sub-group of vertices (vertexlist) ignore this edge
             if (reverse_mapping->find(t_neighbors->at(j)) == reverse_mapping->end())
                 continue;
 
-            int to = reverse_mapping->at(t_neighbors->at(j));
+            t_id to = reverse_mapping->at(t_neighbors->at(j));
 
             if (from != to) { // do not add loops
                 neighbors_.at(from)->push_back(to);
@@ -190,7 +312,7 @@ void Graph::LoadFromEdgelist(size_t vertexcount, t_idpair_list* elist) {
 
 typedef vector<bool>  t_bool_vector;
 
-void recursive_visit(Graph* graph, t_id_list* cluster, int i, t_bool_vector* visited) {
+void recursive_visit(Graph* graph, t_id_list* cluster, t_id i, t_bool_vector* visited) {
     if (visited->at(i))
         return;
 
@@ -221,7 +343,7 @@ Partition* Graph::GetConnectedComponents() {
 }
 
 Graph::~Graph() {
-    for (int i = 0; i < vertex_count_; i++)
+    for (size_t i = 0; i < vertex_count_; i++)
         delete neighbors_[i];
 
     if(id_mapper_)

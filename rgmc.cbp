@@ -11,11 +11,13 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="--file=bin/Debug/email.graph" />
 				<Compiler>
 					<Add option="-Wredundant-decls" />
 					<Add option="-Wcast-align" />
 					<Add option="-Wall" />
 					<Add option="-g" />
+					<Add option="-DDEBUG" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -62,6 +64,15 @@
 		<Unit filename="partition.cpp" />
 		<Unit filename="sparseclusteringmatrix.cpp" />
 		<Extensions>
+			<DoxyBlocks>
+				<comment_style block="1" line="1" />
+				<doxyfile_project />
+				<doxyfile_build />
+				<doxyfile_warnings />
+				<doxyfile_output />
+				<doxyfile_dot />
+				<general />
+			</DoxyBlocks>
 			<code_completion />
 			<envvars />
 			<lib_finder disable_auto="1" />

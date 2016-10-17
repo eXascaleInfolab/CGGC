@@ -7,7 +7,11 @@
 //============================================================================
 
 
+#include <cstdlib>  // atoi, strtoul
+#ifdef DEBUG
 #include <cassert>
+#endif // DEBUG
+
 #include "sparseclusteringmatrix.h"
 #include "activerowset.h"
 #include "graph.h"
@@ -158,6 +162,10 @@ double ModOptimizer::PerformJoins(size_t sample_size) {
     SparseClusteringMatrix cluster_matrix(graph_);
 
     size_t dimension = graph_->get_vertex_count();
+
+    // Ensure that dimension is positive
+    if(!dimension)
+        return -1;
     t_idpair_vector joins(dimension - 1);
     size_t best_step = -1;  // Max value that means not initialized
     double best_step_q = -1;  // Note: evaluated Q always > -0.5 > best_step_q
@@ -259,7 +267,9 @@ double ModOptimizer::PerformJoins(size_t sample_size) {
     }
 
     clusters_ = GetPartitionFromJoins(joins, best_step, nullptr);
+#ifdef DEBUG
     assert(best_step_q > -0.5 && "PerformJoins(), modularity should E (-0.5, 1]");
+#endif // DEBUG
     return best_step_q;
 }
 
@@ -267,8 +277,11 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters
 , size_t k_restart_) {
     SparseClusteringMatrix cluster_matrix(graph, clusters);
     ActiveRowSet active_rows(clusters);
-
     size_t dimension = clusters->get_partition_vector()->size();
+
+    // Ensure that dimension is positive
+    if(!dimension)
+        return nullptr;
     t_idpair_vector joins(dimension - 1);
 
     size_t best_step = -1;  // Max value that means not initialized
@@ -298,9 +311,9 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters
         max_delta_q = -1;
         for (size_t sample_num = 0; sample_num < max_sample; sample_num++) {
             t_index row_num;
-            if (max_sample == clusters->get_partition_vector()->size() - 1 - step)
+            if (max_sample == clusters->get_partition_vector()->size() - 1 - step) {
                 row_num = active_rows.Get(sample_num);
-            else
+            } else
                 row_num = active_rows.GetRandomElement();
 
             t_row_value_map* sample_row = cluster_matrix.GetRow(row_num);
@@ -326,8 +339,8 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters
                     }
                 }
             }
-            if (sample_num == max_sample - 1 && max_delta_q < 0 &&
-                    max_sample < dimension - 1 - step)
+            if (sample_num == max_sample - 1 && max_delta_q < 0
+            && max_sample < dimension - 1 - step)
                 max_sample++;
         }
 
@@ -349,7 +362,9 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters
             best_step = step;
         }
     }
+#ifdef DEBUG
     assert(best_step_q > -0.5 && "PerformJoinsRestart(), modularity should E (-0.5, 1]");
+#endif // DEBUG
     Partition* new_clusters = GetPartitionFromJoins(joins, best_step, clusters);
     return new_clusters;
 }
@@ -405,7 +420,7 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
     t_id_vector clusterdegree(cluster_count); // sum of degrees of all vertices of a cluster
     t_id_vector clustermap(graph->get_vertex_count()); // maps vertex_id -> cluster_id
 
-    vector<unordered_map<t_id, size_t>> links(graph->get_vertex_count());
+    vector<unordered_map<t_id, long>> links(graph->get_vertex_count());  // Note: long is used to correctly evaluate difference
 
     /*
      *   Create and fill data structure
@@ -465,7 +480,7 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
 
                 if (current_cluster_id == cluster_id) continue;
 
-                double term1 = (double) (links[vertex_id][cluster_id] -
+                double term1 = static_cast<double>(links[vertex_id][cluster_id] -
                         links[vertex_id][current_cluster_id]) / edgeCount;
                 double term2 = clusterdegree[cluster_id] -
                         clusterdegree[current_cluster_id];
@@ -478,6 +493,9 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
                 double deltaQ = term1 - term2;
 
                 if (deltaQ > bestDeltaQ) {
+#ifdef DEBUG
+                    assert(deltaQ <= 1.5 && "RefineCluster(), Q E (-0.5, 1] => dQ <= 1.5");
+#endif // DEBUG
                     bestDeltaQ = deltaQ;
                     best_move_cluster = cluster_id;
                 }
@@ -485,8 +503,10 @@ Partition* ModOptimizer::RefineCluster(Graph* graph, Partition* clusters) {
 
             // move vertex
             if (bestDeltaQ > 0) {
+#ifdef DEBUG
                 assert(best_move_cluster != -1
                     && "RefineCluster(), best_move_cluster should be initialized");
+#endif // DEBUG
                 sum_delta_q += bestDeltaQ;
                 clusterdegree[current_cluster_id] -=
                         graph->GetNeighbors(vertex_id)->size();

@@ -52,6 +52,9 @@ size_t ActiveRowSet::GetActiveRowCount() {
 }
 
 void ActiveRowSet::Remove(size_t element) {
+    // Ensure that elements exist and their counter is not underflowed
+    if(!num_elements_)
+        return;
     // copy id from row in last active bucket to bucket of deleted row
     size_t bucket_id = element_lookup_[element];
     element_lookup_[elements_[num_elements_ - 1]] = bucket_id;

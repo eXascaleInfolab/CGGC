@@ -50,7 +50,7 @@ settings of include and lib paths.
 
 -- Run --------------------------------------------------------
 Run rgmc with the following parameters:
-  --file arg               input graph file
+  --file arg               input graph file in Metis (,graph) or Pajek (.net) format (vid >= 1), UNWEIGHTED
   --k arg (=2)             sample size of RG
   --finalk arg (=2000)     sample size for final RG step
   --runs arg (=1)          number of RG runs from which to pick the best result
