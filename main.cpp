@@ -102,15 +102,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (vm.count("outfmt")) {
-        if (out_fmt != 'v' && out_fmt != 'c') {
-            cout << "Invalid file output format specified. Exit." << endl;
-            return 1;
-        }
-        if (out_filename.empty()) {
-            cout << "Output filename is not specified. Exit." << endl;
-            return 1;
-        }
+    if (out_fmt != 'v' && out_fmt != 'c') {
+        cout << "Invalid file output format specified. Exit." << endl;
+        return 1;
     }
 
     if (!vm.count("seed")) {
@@ -172,8 +166,8 @@ int main(int argc, char* argv[]) {
     time = (double(end) - double(start)) / CLOCKS_PER_SEC;
 
     double Q = gclusterer.GetModularityFromClustering(&graph, final_clusters);
-    cout << "Q: " << Q  << " clusters: " << final_clusters->get_partition_vector()->size()
-        << "  time [sec]: "<< time << endl;
+    cout << "Q: " << Q  << ", clusters: " << final_clusters->get_partition_vector()->size()
+        << ", time [sec]: "<< time << endl;
 
     if (!out_filename.empty())
         StoreClustering(out_filename, final_clusters, &graph, out_fmt == 'c');
