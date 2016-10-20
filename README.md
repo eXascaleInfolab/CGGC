@@ -36,7 +36,7 @@ http://www.cc.gatech.edu/dimacs10/papers/%5B18%5D-dimacs10_ovelgoennegeyerschulz
 Michael Ovelgönne mov -a-t- umiacs.umd.edu  - for the algorithm-related questions.
 Please use github Issues for the implementation-related issues.
 
-## Prerequisites ---------------------------------------------
+## Prerequisites
 1. Boost program options library (v. >= 1.42)
 "sudo apt-get install libboost-program-options-dev"
 
@@ -51,6 +51,7 @@ settings of include and lib paths.
 
 ## Run
 Run rgmc with the following parameters:
+```
   --file arg               input graph file in Metis (,graph) or Pajek (.net) format (vid >= 1), UNWEIGHTED
   --k arg (=2)             sample size of RG
   --finalk arg (=2000)     sample size for final RG step
@@ -63,11 +64,12 @@ Run rgmc with the following parameters:
     c  - each line contains unwrapped clusters, i.e. list of the member vertices (ids)
     v  - each lie corresponds to the vertex and contains it's owner cluster (id)
   --seed arg               seed value to initialize random number generator
-
+```
 
 ### Example
-
+```
 $ rgmc --file=test.graph --algorithm=3 --outfile=test.out
 runs the CGGCi_RG algorithm on the graph test.graph and writes the results to
 test.out
 $ rgmc --file=email.graph
+```
