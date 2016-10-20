@@ -1,5 +1,4 @@
-Implementation of the Randomized Greedy (RG) modularity clustering algorithm
-and the use of RG in the CGGC/CGGCi scheme.
+# Randomized Greedy (RG) modularity clustering algorithm and the use of RG in the CGGC/CGGCi scheme.
 
 The Paper: "An Ensemble Learning Strategy for Graph Clustering" by
 Michael Ovelgönne and Andreas Geyer-Schulz at Graph Partitioning and
@@ -10,23 +9,20 @@ challenges, 10th DIMACS Implementation Challenge
 
 http://www.umiacs.umd.edu/~mov/
 
-NOTE: the original rgmc clustering (algorithms: RG, CGGC_RG, CGGCi_RG)
-did not output resulting clusters. This is a modified version that fixes
-this bug and outputs clusters to be able to compare them against the
-ground-truth.
-This is a significantly refactored version with updated I/O (full support of
-the official Metis format of the input graph), but untouched original
-clustering algorithm(s).
+> This is a modified version of the original rgmc clustering algorithm
+(algorithms: RG, CGGC_RG, CGGCi_RG) with the fixed bugs to outpt the
+resulting clusters, with additional I/O (full support of the official
+Metis format of the input graph) and significantly refactored. The
+core algorithm itself is untouched (and the implementation is not
+optimal).
 
--- DISCLAIMER -------------------------------------------------
-Copyright 2009-2012 Michael Ovelgönne and Karlsruhe Institute of Technology
+## Disclamer
+Copyright 2009-2012 Michael Ovelgönne and Karlsruhe Institute of Technology.
+Updated by Artem V L, University of Fribourg.
 
-This is experimental code. Please use it with caution.
-The software is provided "as is" and is free for academic and non-profit use. 
-This software or any part of it must not be distributed without
-prior written agreement of the copyright holders.
+Licensed under the [LGPL v2.1](License.md).
 
--- Reference -------------------------------------------------
+## Reference
 This is a slightly altered and cleaned-up version of the code used for the
 10th DIMACS Implementation Challenge. 
 
@@ -36,27 +32,24 @@ Michael Ovelgönne and Andreas Geyer-Schulz,
 10th DIMACS Implementation Challenge - Graph Partitioning and Graph Clustering, 2012
 http://www.cc.gatech.edu/dimacs10/papers/%5B18%5D-dimacs10_ovelgoennegeyerschulz.pdf
 
--- Contact ---------------------------------------------------
-Michael Ovelgönne 
-mov -a-t- umiacs.umd.edu
+## Contact
+Michael Ovelgönne mov -a-t- umiacs.umd.edu  - for the algorithm-related questions.
+Please use github Issues for the implementation-related issues.
 
-If you have questions or if you encountered bugs, please send an e-mail.
-
--- Prerequisites ---------------------------------------------
-1. Boost libraries (http://www.boost.org/) 
-The code has been tested with Boost version 1.42.
-Debian/Ubuntu users can run "sudo apt-get install libboost-all-dev"
+## Prerequisites ---------------------------------------------
+1. Boost program options library (v. >= 1.42)
+"sudo apt-get install libboost-program-options-dev"
 
 2. Make
-only needed, if you want to use the makefile
+Only needed, if you want to use the Makefile
 
--- Build ------------------------------------------------------
+## Build
 The source code comes with a makefile. Run make to build the program.
 Compiler/Linker errors are most likely due to incorrect 
 settings of include and lib paths.  
 
 
--- Run --------------------------------------------------------
+## Run
 Run rgmc with the following parameters:
   --file arg               input graph file in Metis (,graph) or Pajek (.net) format (vid >= 1), UNWEIGHTED
   --k arg (=2)             sample size of RG
@@ -72,7 +65,7 @@ Run rgmc with the following parameters:
   --seed arg               seed value to initialize random number generator
 
 
-Example:
+### Example
 
 $ rgmc --file=test.graph --algorithm=3 --outfile=test.out
 runs the CGGCi_RG algorithm on the graph test.graph and writes the results to
