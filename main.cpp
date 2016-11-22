@@ -28,16 +28,16 @@ namespace po = boost::program_options;
 
 //! \brief Save resulting clusters to the specified file
 //!
-//! \param out_filename string  - output file name
+//! \param outfname string  - output file name
 //! \param final_clusters Partition*  - clusters
 //! \param graph Graph*  - input graph
 //! \param clmbs bool  - output cluster members or vertices owner (cluster) id
 //! \return void
-void StoreClustering(string out_filename, Partition* final_clusters, Graph* graph, bool clmbs) {
+void StoreClustering(string outfname, Partition* final_clusters, Graph* graph, bool clmbs) {
 #ifdef DEBUG
-    cout << ">> Saving resulting clustering to the " << out_filename << endl;
+    cout << ">> Saving resulting clustering to the " << outfname << endl;
 #endif // DEBUG
-    ofstream out(out_filename.c_str());
+    ofstream out(outfname.c_str());
     if (!out) {
         cerr << "Cannot open output file.\n";
         return;
@@ -60,9 +60,10 @@ void StoreClustering(string out_filename, Partition* final_clusters, Graph* grap
 }
 
 int main(int argc, char* argv[]) {
+    char inpfmt;
     string filename;
-    string out_filename;
-    char out_fmt;
+    char outfmt;
+    string outfname;
     int k;
     int finalk;
     int runs;
@@ -72,24 +73,38 @@ int main(int argc, char* argv[]) {
     int alg;
     int seed;
 
-    po::options_description desc("Supported Arguments");
+    po::options_description desc("Performs clustering of the unweighed undirected"
+        " network (graph) using RG, CGGC_RG or CGGCi_RG algorithms.\n"
+        "\nSupported Arguments");
     desc.add_options()
-            ("help", "Display this message")
-            ("file", po::value<string > (&filename), "input graph file")
-            ("k", po::value<int>(&k)->default_value(2), "sample size of RG")
-            ("finalk", po::value<int>(&finalk)->default_value(2000), "sample size for final RG step")
-            ("runs", po::value<int>(&runs)->default_value(1), "number of runs from which to pick the best result")
-            ("ensemblesize", po::value<int>(&ensemblesize)->default_value(-1), "size of ensemble for ensemble algorithms (-1 = ln(#vertices))")
-            ("algorithm", po::value<int>(&alg)->default_value(1), "algorithm: 1: RG, 2: CGGC_RG, 3: CGGCi_RG")
-            ("outfmt", po::value<char> (&out_fmt)->default_value('c'), "output clusters format:"
+            ("help,h", "Display this message")
+            ("inpfmt,i", po::value<char> (&inpfmt)->default_value(0),
+             "input network format (inferred from the file extension if not specified explicitly):"
+                "\n\te - nse format: header in comments + each line specifies a single edge: <sid> <did>,"
+                "\n\ta - nsa format: header in comments + each line specifies a single arc: <sid> <did>,"
+                "\n\tm - Metis format of the unweighted network,"
+                "\n\tp - Pajek format of the undirected unweighted network"
+            )
+            //("inpfile", po::value<string > (&filename), "input graph file")
+            ("startk,s", po::value<int>(&k)->default_value(2), "sample size of RG")
+            ("finalk,f", po::value<int>(&finalk)->default_value(2000), "sample size for final RG step")
+            ("runs,r", po::value<int>(&runs)->default_value(1), "number of runs from which to pick the best result")
+            ("ensemblesize,e", po::value<int>(&ensemblesize)->default_value(-1), "size of ensemble for ensemble algorithms (-1 = ln(#vertices))")
+            ("algorithm,a", po::value<int>(&alg)->default_value(3), "algorithm: 1: RG, 2: CGGC_RG, 3: CGGCi_RG")  // Note: 3 is the most accurate, but also the heaviest; 2 and 3 are ensemble clustering
+            ("outfmt,o", po::value<char> (&outfmt)->default_value('l'), "output clusters format:"
+                "\n\tl - cnl format: header in comments + each line corresponds to the cluster and contains ids of the member vertices,"
                 "\n\tc - each line corresponds to the cluster and contains ids of the member vertices,"
-                "\n\tv - each line corresponds to the vertex and contains id of the owner cluster")
-            ("outfile", po::value<string> (&out_filename), "file to store the detected communities")
-            ("seed", po::value<int> (&seed), "seed value to initialize random number generator")
+                "\n\tv - each line corresponds to the vertex and contains id of the owner cluster"
+            )
+            ("outfile,f", po::value<string> (&outfname), "file to store the detected communities if required")
+            ("seed,d", po::value<int> (&seed), "seed value to initialize random number generator")
             ;
+    po::positional_options_description pdesc;
+    pdesc.add("inpfile", 1);
 
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::store(po::command_line_parser(argc, argv).options(desc)
+        .positional(pdesc).run(), vm);
     po::notify(vm);
 
     if (vm.count("help")) {
@@ -97,13 +112,9 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    if (!vm.count("file")) {
-        cout << "No filename given. Exit." << endl;
-        return 1;
-    }
-
-    if (out_fmt != 'v' && out_fmt != 'c') {
-        cout << "Invalid file output format specified. Exit." << endl;
+    if (!vm.count("inpfile")) {
+        cerr << "Error. No filename given.\n";
+        cout << desc << "\n";
         return 1;
     }
 
@@ -112,11 +123,9 @@ int main(int argc, char* argv[]) {
         time(&t);
         srand((unsigned int) t);
     }
-    else {
-        srand((unsigned int) seed);
-    }
+    else srand((unsigned int) seed);
 
-    Graph graph(filename);
+    Graph graph(filename, inpfmt);
 
     if (ensemblesize == -1) ensemblesize = log(graph.get_vertex_count());
 
@@ -134,7 +143,7 @@ int main(int argc, char* argv[]) {
             iterative = 1;
             break;
         default:
-            cout << "Invalid parameter for '--algorithm'." << endl;
+            cerr << "Error. Invalid parameter for '--algorithm'.\n";
             return 1;
     }
 
@@ -169,7 +178,7 @@ int main(int argc, char* argv[]) {
     cout << "Q: " << Q  << ", clusters: " << final_clusters->get_partition_vector()->size()
         << ", time [sec]: "<< time << endl;
 
-    if (!out_filename.empty())
-        StoreClustering(out_filename, final_clusters, &graph, out_fmt == 'c');
+    if (!outfname.empty())
+        StoreClustering(outfname, final_clusters, &graph, outfmt == 'c');
 }
 

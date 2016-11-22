@@ -12,12 +12,14 @@
 
 #include <string>
 #include <unordered_map>
+#include <fstream>
 
 #include "basetypes.h"
 #include "partition.h"
 
 using std::string;
 using std::unordered_map;
+using std::ifstream;
 
 
 typedef list<t_idpair>  t_idpair_list;
@@ -25,7 +27,9 @@ typedef unordered_map<t_id, t_id>  t_id_id_map;
 
 class Graph {
 public:
-    Graph(string filename);
+    static char inputFormat(const string& filename);
+
+    Graph(const string& filename, char fmt);
     Graph(Graph* ingraph, t_id_list* vertexlist);
     Graph(size_t vertexcount, t_idpair_list* elist);
     ~Graph();
@@ -42,17 +46,21 @@ public:
 
     t_id_vector* GetNeighbors(t_id vertex_id);
     Partition* GetConnectedComponents();
-
 private:
     size_t vertex_count_;
     size_t edge_count_;
     vector<t_id_vector*> neighbors_;
     t_id_id_map* id_mapper_;
 
+    unordered_map<t_id, t_id>  ieids;  // Map from internal to external ids of nodes
 protected:
-    void LoadFromFile(string filename);
+    void LoadFromFile(const string& filename, char fmt);
     void LoadSubgraph(Graph* ingraph, t_id_list* vertexlist);
     void LoadFromEdgelist(size_t vertexcount, t_idpair_list* elist);
+
+    void loadNSL(ifstream& inpfile, bool directed);
+    void loadMetis(ifstream& inpfile);
+    void loadPajek(ifstream& inpfile);
 };
 
 #endif /* GRAPH_H_ */

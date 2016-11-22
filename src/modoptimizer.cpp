@@ -203,7 +203,6 @@ double ModOptimizer::PerformJoins(size_t sample_size) {
         t_index join_a = -1; //  the two clusters to join
         t_index join_b = -1;
 
-        max_delta_q = -1;
         for (size_t sample_num = 0; sample_num < max_sample; sample_num++) {
 
             t_index row_num = -1;
@@ -308,7 +307,6 @@ Partition* ModOptimizer::PerformJoinsRestart(Graph* graph, Partition* clusters
         t_index join_a = -1; //  the two clusters to join
         t_index join_b = -1;
 
-        max_delta_q = -1;
         for (size_t sample_num = 0; sample_num < max_sample; sample_num++) {
             t_index row_num;
             if (max_sample == clusters->get_partition_vector()->size() - 1 - step) {

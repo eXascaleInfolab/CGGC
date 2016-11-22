@@ -8,10 +8,8 @@
 //               rows/columns
 //============================================================================
 
-
-#include "activerowset.h"
-
 #include "partition.h"
+#include "activerowset.h"
 
 ActiveRowSet::ActiveRowSet(size_t size)
 : elements_(), element_lookup_(), num_elements_(size)  {
