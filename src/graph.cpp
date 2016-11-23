@@ -25,13 +25,13 @@ using std::domain_error;
 
 
 // Accessory functions ---------------------------------------------------------
-void tolower(string& text)
+void lowerCase(string& text)
 {
     for(auto& c: text)
         c = tolower(c);
 }
 
-void tolower(char* text)
+void lowerCase(char* text)
 {
 	if(!text)
 		return;
@@ -185,7 +185,7 @@ void Graph::loadNSL(ifstream& finp, bool directed)
         char *tok = strtok(const_cast<char*>(line.data()), " \t");
         if(!tok)
 			continue;
-		tolower(tok);
+		lowerCase(tok);
 		if(strcmp(tok, "nodes"))
 			continue;
 		// Read nodes num
@@ -196,7 +196,7 @@ void Graph::loadNSL(ifstream& finp, bool directed)
 			// Read the number of links
 			tok = strtok(nullptr, " \t");
 			if(tok) {
-				tolower(tok);
+				lowerCase(tok);
 				if(directed ? !strcmp(tok, "edges") : !strcmp(tok, "arcs"))
                     throw domain_error(string(tok).insert(0, "Unexpected internal file format: ") += "\n");
 				tok = strtok(nullptr, " \t");
@@ -205,7 +205,7 @@ void Graph::loadNSL(ifstream& finp, bool directed)
 					edge_count_ = strtoul(tok, nullptr, 10);
 					// Read Weighted flag
 					tok = strtok(nullptr, " \t");
-					if(tok && (tolower(tok), !strcmp(tok, "weighted"))
+					if(tok && (lowerCase(tok), !strcmp(tok, "weighted"))
 					&& (tok = strtok(nullptr, " \t")) && strtoul(tok, nullptr, 10) != 0)
 						fputs("WARNING, the network is weighted and this algorithm does not support weights"
 							", so the weights are omitted.\n", stderr);
@@ -262,10 +262,17 @@ void Graph::loadNSL(ifstream& finp, bool directed)
 		&& "Node mappings are not synchronized");
 
 	// Initialize internal data structures using nodes
-	if(!vertex_count_)
+	assert((!vertex_count_ || vertex_count_ == neighbors_.size())
+        && "Nodes size validation failed");
+	if(vertex_count_ != neighbors_.size())
 		vertex_count_ = neighbors_.size();
-	if(!edge_count_)
-		edge_count_ = iline * (1 + !directed);
+
+	const size_t  arcsnum = iline * (1 + !directed);
+	assert((!edge_count_ || edge_count_ == arcsnum) && "Arcs size validation failed");
+	if(edge_count_ != arcsnum)
+		edge_count_ = arcsnum;
+    assert(edge_count_ % 2 == 0 && "The number of arcs should be even");
+    edge_count_ /= 2;
 }
 
 void Graph::loadMetis(ifstream& inpfile)
@@ -386,6 +393,7 @@ void Graph::loadMetis(ifstream& inpfile)
         //}
         ++from;
     }
+    assert(edge_count_ % 2 == 0 && "The number of arcs should be even");
     edge_count_ /= 2;
     assert(vertex_count_ == neighbors_.size() && "Vertex number validation failed");
 }
@@ -405,7 +413,7 @@ void Graph::loadPajek(ifstream& inpfile)
         if(line.empty() || line[0] == '%')
             continue;
         if(line[0] == '*') {
-            tolower(line);
+            lowerCase(line);
             // Read the number of vertices
             if(line == "*vertices") {
                 auto vnumstr = line.c_str() + strlen("*vertices");

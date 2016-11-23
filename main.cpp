@@ -51,7 +51,7 @@ void StoreClustering(string outfname, Partition* final_clusters, Graph* graph, c
     case 'l':  // A special case of the cnl format
     default:
         // Output the CNL header
-        out <<  "Clusters: " << cls.size() << ",  Nodes: " <<  graph->get_vertex_count()
+        out <<  "# Clusters: " << cls.size() << ",  Nodes: " <<  graph->get_vertex_count()
             << ", Fuzzy: 0\n";
     case 'c':  // without the header
         for (size_t i = 0; i < cls.size(); i++) {
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
             ("finalk,f", po::value<int>(&finalk)->default_value(2000), "sample size for final RG step")
             ("runs,r", po::value<int>(&runs)->default_value(1), "number of runs from which to pick the best result")
             ("ensemblesize,e", po::value<int>(&ensemblesize)->default_value(-1), "size of ensemble for ensemble algorithms (-1 = ln(#vertices))")
-            ("algorithm,a", po::value<int>(&alg)->default_value(3), "algorithm: 1: RG, 2: CGGC_RG, 3: CGGCi_RG")  // Note: 3 is the most accurate, but also the heaviest; 2 and 3 are ensemble clustering
+            ("algorithm,a", po::value<int>(&alg)->default_value(2), "algorithm: 1: RG, 2: CGGC_RG, 3: CGGCi_RG")  // Note: 3 is the most accurate, but also the heaviest; 2 and 3 are ensemble clustering
             ("outfmt,o", po::value<char> (&outfmt)->default_value('l'), "output clusters format:"
                 "\n\tl - cnl format: header in comments + each line corresponds to the cluster and contains ids of the member vertices,"
                 "\n\tc - each line corresponds to the cluster and contains ids of the member vertices,"

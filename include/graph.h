@@ -50,7 +50,7 @@ public:
     unordered_map<t_id, t_id>  ieids;  // Map from internal to external ids of nodes
 private:
     size_t vertex_count_;
-    size_t edge_count_;
+    size_t edge_count_;  // The number of edges, not arcs!
     vector<t_id_vector*> neighbors_;
     t_id_id_map* id_mapper_;
 protected:
