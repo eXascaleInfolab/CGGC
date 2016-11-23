@@ -81,22 +81,22 @@ For example:
 $ rgmc --algorithm=2 --outfile=test.out test.graph
 runs the CGGCi_RG algorithm on the graph test.graph and writes the results to
 test.out
-$ rgmc email.graph
 ```
+or just `$ rgmc email.graph`.
 
 ## Input
 The undirected unweighted input network to be clustered can be specified in the NSL (nsa/nse), [Metis graph](http://people.sc.fsu.edu/~jburkardt/data/metis_graph/metis_graph.html) or [Pajek network](https://gephi.org/users/supported-graph-formats/pajek-net-format/) (using only `*Edges`) formats.
 
 NSL format (nsa - arcs, directed network; nse - edges, undirected network) specifies network links in each line of the file as node ids separated by the space delimiter with optional `#` line comments and an optional header:
-	```
-	# Example Network .nse (edges - undirected)
-	# Nodes: 3  Edges: 3   Weighted: 0
-	# Note that the number of links corresponds to the number of payload lines in the file
-	0 1
-	# Empty lines and comments are allowed
-	0 2
-	2 1
-	```
+```
+# Example Network .nse (edges - undirected)
+# Nodes: 3  Edges: 3   Weighted: 0
+# Note that the number of links corresponds to the number of payload lines in the file
+0 1
+# Empty lines and comments are allowed
+0 2
+2 1
+```
 
 ## Output
 The CNL (clusters nodes list) output is the default and standard output format, generalization of the Stanford SNAP ground-truth communities. It is an input format for various NMI-evaluation algorithms. Each line of the file corresponds to the single resulting cluster, where member nodes are specified separated by the space/tab with optional share. For example:
