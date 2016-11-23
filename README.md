@@ -1,4 +1,4 @@
-# Randomized Greedy (RG) modularity clustering algorithm with CGGC/CGGCi (Core Groups Graph ensemble Clustering Iterative) scheme.
+# Randomized Greedy (RG) modularity clustering algorithm with Core Groups Graph ensemble Clustering Iterative (CGGC/CGGCi) scheme
 
 The Paper: [An Ensemble Learning Strategy for Graph Clustering](http://www.cc.gatech.edu/dimacs10/papers/%5B18%5D-dimacs10_ovelgoennegeyerschulz.pdf)
 by Michael Ovelgönne and Andreas Geyer-Schulz at Graph Partitioning and
