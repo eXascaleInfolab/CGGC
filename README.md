@@ -1,12 +1,17 @@
 # Randomized Greedy (RG) modularity clustering algorithm with CGGC/CGGCi (Core Groups Graph ensemble Clustering Iterative) scheme.
 
-The Paper: "An Ensemble Learning Strategy for Graph Clustering" by
-Michael Ovelgönne and Andreas Geyer-Schulz at Graph Partitioning and
+The Paper: [An Ensemble Learning Strategy for Graph Clustering](http://www.cc.gatech.edu/dimacs10/papers/%5B18%5D-dimacs10_ovelgoennegeyerschulz.pdf)
+by Michael Ovelgönne and Andreas Geyer-Schulz at Graph Partitioning and
 Graph Clustering, Contemporary Mathematics, American Mathematical
-Society, 2013
+Society, 2013  
 Winner of modularity maximization and modularity pareto (time + quality)
 challenges, 10th DIMACS Implementation Challenge  
 Original sources: http://www.umiacs.umd.edu/~mov/
+
+Copyright 2009-2012 Michael Ovelgönne <mov -a-t- umiacs.umd.edu>, Karlsruhe Institute of Technology.  
+Modified by Artem Lutov <artem@exascale.info>, University of Fribourg.
+
+Licensed under the [LGPL v2.1](License.md).
 
 > This is a modified version of the original rgmc (RG, CGGC_RG, CGGCi_RG clustering
 algorithms) extended with additional I/O formats and some minor fixes (mainly in
@@ -16,42 +21,25 @@ in the [PyCABeM clustering benchmark](https://github.com/eXascaleInfolab/PyCABeM
 The core algorithm itself is untouched (though, the implementation is not
 optimal).
 
-## Disclamer
-Copyright 2009-2012 Michael Ovelgönne and Karlsruhe Institute of Technology.  
-Modified by Artem Lutov <artem@exascale.info>, University of Fribourg.
+## Content
+- [Deployment](#deployment)
+	- [Dependencies](#dependencies)
+	- [Compilation](#compilation)
+- [Usage](#usage)
+  - [Input](#input)
+  - [Output](#output)
+- [Related Projects](#related-projects)
 
-Licensed under the [LGPL v2.1](License.md).
-
-## Reference
-This is a slightly altered and cleaned-up version of the code used for the
-10th DIMACS Implementation Challenge. The algorithm performs a modularity-based
-greedy (RG) and optionally ensemble (CGGC) clustering of the unweighted undirected
-input network (graph).
-
-Reference:  
-An Ensemble Learning Strategy for Graph Clustering,
-Michael Ovelgönne and Andreas Geyer-Schulz,
-10th DIMACS Implementation Challenge - Graph Partitioning and Graph Clustering, 2012
-http://www.cc.gatech.edu/dimacs10/papers/%5B18%5D-dimacs10_ovelgoennegeyerschulz.pdf
-
-## Contact
-Michael Ovelgönne <mov -a-t- umiacs.umd.edu>  - for the algorithm-related questions.
-Please use github Issues for the implementation-related issues.
-
-## Prerequisites
-1. Boost program options library (v. >= 1.42)
+# Deployment
+## Dependencies
+Boost program options library (v. >= 1.42)
 "sudo apt-get install libboost-program-options-dev"
 
-2. Make
-Only needed, if you want to use the Makefile
+## Compilation
+`$ make [release|debug]`  
+Compiler/Linker errors are most likely due to incorrect settings of include and lib paths.  
 
-## Build
-The source code comes with a makefile. Run make to build the program.
-Compiler/Linker errors are most likely due to incorrect
-settings of include and lib paths.  
-
-
-## Run
+# Usage
 Run rgmc with the following parameters:
 ```
 $ ./rgmc -h
@@ -88,10 +76,39 @@ Supported Arguments:
                                   generator
 ```
 
-### Example
+For example:
 ```
 $ rgmc --algorithm=2 --outfile=test.out test.graph
 runs the CGGCi_RG algorithm on the graph test.graph and writes the results to
 test.out
 $ rgmc email.graph
 ```
+
+## Input
+The undirected unweighted input network to be clustered can be specified in the NSL (nsa/nse), [Metis graph](http://people.sc.fsu.edu/~jburkardt/data/metis_graph/metis_graph.html) or [Pajek network](https://gephi.org/users/supported-graph-formats/pajek-net-format/) (using only `*Edges`) formats.
+
+NSL format (nsa - arcs, directed network; nse - edges, undirected network) specifies network links in each line of the file as node ids separated by the space delimiter with optional `#` line comments and an optional header:
+	```
+	# Example Network .nse (edges - undirected)
+	# Nodes: 3  Edges: 3   Weighted: 0
+	# Note that the number of links corresponds to the number of payload lines in the file
+	0 1
+	# Empty lines and comments are allowed
+	0 2
+	2 1
+	```
+
+## Output
+The CNL (clusters nodes list) output is the default and standard output format, generalization of the Stanford SNAP ground-truth communities. It is an input format for various NMI-evaluation algorithms. Each line of the file corresponds to the single resulting cluster, where member nodes are specified separated by the space/tab with optional share. For example:
+```
+# Clusters: 2, Nodes: 5, Fuzzy: 0
+0
+1 3 2 4
+```
+The clusters output for each vertex is also supported.
+
+# Related Projects
+- [GenConvNMI](https://github.com/eXascaleInfolab/GenConvNMI) - Overlapping NMI evaluation that is compatible with the original NMI (unlike the `onmi`).
+- [OvpNMI](https://github.com/eXascaleInfolab/OvpNMI) - Another method of the NMI evaluation for the overlapping clusters (communities) that is not compatible with the standard NMI value unlike GenConvNMI, but it is much faster and yields exact results unlike probabilistic results with some variance in GenConvNMI.
+- [ExecTime](https://bitbucket.org/lumais/exectime/)  - A lightweight resource consumption (RSS RAM, CPU, etc.) profiler.
+- [PyCABeM](https://github.com/eXascaleInfolab/PyCABeM) - Python Benchmarking Framework for the Clustering Algorithms Evaluation. Uses extrinsic (NMIs) and intrinsic (Q) measures for the clusters quality evaluation considering overlaps (nodes membership by multiple clusters).

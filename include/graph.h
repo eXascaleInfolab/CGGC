@@ -46,13 +46,13 @@ public:
 
     t_id_vector* GetNeighbors(t_id vertex_id);
     Partition* GetConnectedComponents();
+
+    unordered_map<t_id, t_id>  ieids;  // Map from internal to external ids of nodes
 private:
     size_t vertex_count_;
     size_t edge_count_;
     vector<t_id_vector*> neighbors_;
     t_id_id_map* id_mapper_;
-
-    unordered_map<t_id, t_id>  ieids;  // Map from internal to external ids of nodes
 protected:
     void LoadFromFile(const string& filename, char fmt);
     void LoadSubgraph(Graph* ingraph, t_id_list* vertexlist);

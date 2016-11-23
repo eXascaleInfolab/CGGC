@@ -41,18 +41,18 @@ void tolower(char* text)
 
 // Graph definition ------------------------------------------------------------
 Graph::Graph(const string& filename, char fmt)
-: vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr), ieids() {
+: ieids(), vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr) {
     LoadFromFile(filename, fmt);
 }
 
 Graph::Graph(Graph* ingraph, t_id_list* vertexlist)
-: vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr), ieids() {
+: ieids(), vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr) {
 
     LoadSubgraph(ingraph, vertexlist);
 }
 
 Graph::Graph(size_t vertexcount, t_idpair_list* elist)
-: vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr), ieids() {
+: ieids(), vertex_count_(0), edge_count_(0), neighbors_(), id_mapper_(nullptr) {
     LoadFromEdgelist(vertexcount, elist);
 }
 
@@ -241,13 +241,13 @@ void Graph::loadNSL(ifstream& finp, bool directed)
 		auto ies = eiids.find(sid);  // Index of the external src id
 		if(ies == eiids.end()) {
 			ies = eiids.emplace(sid, eiids.size()).first;
-			ieids.emplace(ieids.size(), sid);
+			ieids.emplace(ies->second, sid);
 			neighbors_.push_back(new t_id_vector());
 		}
 		auto ied = eiids.find(did);  // Index of the external dst id
 		if(ied == eiids.end()) {
 			ied = eiids.emplace(did, eiids.size()).first;
-			ieids.emplace(ieids.size(), did);
+			ieids.emplace(ied->second, did);
 			neighbors_.push_back(new t_id_vector());
 		}
 		neighbors_[ies->second]->push_back(ied->second);
@@ -270,7 +270,8 @@ void Graph::loadNSL(ifstream& finp, bool directed)
 
 void Graph::loadMetis(ifstream& inpfile)
 {
-    // Metis format of the input graph (.graph):
+    // Metis format of the input graph (.graph),
+    // see http://people.sc.fsu.edu/~jburkardt/data/metis_graph/metis_graph.html:
     // % Comments are marked with '%' symbol
     // % Header:
     // <vertices_num> <endges_num> [<format_bin> [vwnum]]

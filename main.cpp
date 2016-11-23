@@ -31,32 +31,52 @@ namespace po = boost::program_options;
 //! \param outfname string  - output file name
 //! \param final_clusters Partition*  - clusters
 //! \param graph Graph*  - input graph
-//! \param clmbs bool  - output cluster members or vertices owner (cluster) id
+//! \param fmt char  - output clusters format: members or vertices owner (cluster) id
 //! \return void
-void StoreClustering(string outfname, Partition* final_clusters, Graph* graph, bool clmbs) {
+void StoreClustering(string outfname, Partition* final_clusters, Graph* graph, char fmt) {
 #ifdef DEBUG
     cout << ">> Saving resulting clustering to the " << outfname << endl;
 #endif // DEBUG
-    ofstream out(outfname.c_str());
+    ofstream out;
+    out.exceptions(ofstream::badbit);
+    out.open(outfname.c_str());
     if (!out) {
-        cerr << "Cannot open output file.\n";
+        cerr << "Cannot open the output file.\n";
         return;
     }
-    if(clmbs) {
-        for (size_t i = 0; i < final_clusters->get_partition_vector()->size(); i++) {
-            for (t_id vertex_id: *(final_clusters->get_partition_vector()->at(i)))
-                out << vertex_id + 1 << ' ' ;
+    const auto&  cls = *final_clusters->get_partition_vector();
+    const auto&  ieids = graph->ieids;
+    switch(fmt) {
+    // List member vertices of each cluster
+    case 'l':  // A special case of the cnl format
+    default:
+        // Output the CNL header
+        out <<  "Clusters: " << cls.size() << ",  Nodes: " <<  graph->get_vertex_count()
+            << ", Fuzzy: 0\n";
+    case 'c':  // without the header
+        for (size_t i = 0; i < cls.size(); i++) {
+            for (t_id vertex_id: *(cls.at(i)))
+                out << !ieids.empty() ? ieids.at(vertex_id) : ++vertex_id << ' ' ;  // Note: ++ to map back to the original id for Metis and Pajek
             out << endl;
         }
-    } else {
+        break;
+    // List clusters of each vertex
+    case 'v':
         t_id_vector assingments(graph->get_vertex_count(), -1);
-        for (size_t i = 0; i < final_clusters->get_partition_vector()->size(); i++)
-            for (t_id vertex_id: *(final_clusters->get_partition_vector()->at(i)))
-                assingments[vertex_id] = i + 1;
-        for (size_t i = 0; i < graph->get_vertex_count(); i++)
-            out << assingments[i] << "\n";
+        for (size_t i = 0; i < cls.size(); i++)
+            for (t_id vertex_id: *(cls.at(i)))
+                assingments[vertex_id] = i + 1;  // Note: +1 to output cluster ids starting from 1
+        // Input vertices in the CNL format might form non-solid range and, hence,
+        // their ids should be explicitly specified
+        if(!ieids.empty())
+            out << "# Vertex Cluster";
+        for (size_t i = 0; i < assingments.size(); i++) {
+            if(!ieids.empty())
+                out << ieids.at(i) << ' ';
+            out << assingments[i] << endl;
+        }
+        break;
     }
-    out.close();
 }
 
 int main(int argc, char* argv[]) {
@@ -179,6 +199,6 @@ int main(int argc, char* argv[]) {
         << ", time [sec]: "<< time << endl;
 
     if (!outfname.empty())
-        StoreClustering(outfname, final_clusters, &graph, outfmt == 'c');
+        StoreClustering(outfname, final_clusters, &graph, outfmt);
 }
 
