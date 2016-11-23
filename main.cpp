@@ -1,6 +1,7 @@
 //============================================================================
 // Name        : RGMC.cpp
 // Author      : Michael Ovelgönne
+//               extended by Artem Lutov <artem@exascale.info>, UniFR
 // Version     :
 // Copyright   : 2009-2012 Karlsruhe Institute of Technology
 // Description : Test application for randomized greedy modularity clustering
@@ -12,7 +13,6 @@
 #include <fstream>
 #include <vector>
 
-//#include <boost/version.hpp>
 #include <boost/program_options.hpp>
 
 #include "modoptimizer.h"
@@ -56,7 +56,7 @@ void StoreClustering(string outfname, Partition* final_clusters, Graph* graph, c
     case 'c':  // without the header
         for (size_t i = 0; i < cls.size(); i++) {
             for (t_id vertex_id: *(cls.at(i)))
-                out << !ieids.empty() ? ieids.at(vertex_id) : ++vertex_id << ' ' ;  // Note: ++ to map back to the original id for Metis and Pajek
+                out << (!ieids.empty() ? ieids.at(vertex_id) : ++vertex_id) << ' ' ;  // Note: ++ to map back to the original id for Metis and Pajek
             out << endl;
         }
         break;
@@ -93,9 +93,19 @@ int main(int argc, char* argv[]) {
     int alg;
     int seed;
 
-    po::options_description desc("Performs clustering of the unweighed undirected"
+    if(argc <= 0) {
+        cerr << "Error. Input arguments are expected.\n";
+        return 1;
+    }
+
+    po::options_description desc(string("Performs clustering of the unweighed undirected"
         " network (graph) using RG, CGGC_RG or CGGCi_RG algorithms.\n"
-        "\nSupported Arguments");
+        "\nUsage: ").append(argv[0]).append("[options] inpfile\n"
+        "\nSupported Arguments"));
+
+    po::positional_options_description pdesc;
+    pdesc.add("inpfile", -1);
+
     desc.add_options()
             ("help,h", "Display this message")
             ("inpfmt,i", po::value<char> (&inpfmt)->default_value(0),
@@ -105,7 +115,7 @@ int main(int argc, char* argv[]) {
                 "\n\tm - Metis format of the unweighted network,"
                 "\n\tp - Pajek format of the undirected unweighted network"
             )
-            //("inpfile", po::value<string > (&filename), "input graph file")
+            ("inpfile", po::value<string>(&filename), "input network (graph) file")
             ("startk,s", po::value<int>(&k)->default_value(2), "sample size of RG")
             ("finalk,f", po::value<int>(&finalk)->default_value(2000), "sample size for final RG step")
             ("runs,r", po::value<int>(&runs)->default_value(1), "number of runs from which to pick the best result")
@@ -116,15 +126,12 @@ int main(int argc, char* argv[]) {
                 "\n\tc - each line corresponds to the cluster and contains ids of the member vertices,"
                 "\n\tv - each line corresponds to the vertex and contains id of the owner cluster"
             )
-            ("outfile,f", po::value<string> (&outfname), "file to store the detected communities if required")
+            ("outfile,c", po::value<string> (&outfname), "file to store the detected communities if required")
             ("seed,d", po::value<int> (&seed), "seed value to initialize random number generator")
             ;
-    po::positional_options_description pdesc;
-    pdesc.add("inpfile", 1);
-
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc)
-        .positional(pdesc).run(), vm);
+    po::store(po::command_line_parser(argc, argv)
+        .options(desc).positional(pdesc).run(), vm);
     po::notify(vm);
 
     if (vm.count("help")) {
