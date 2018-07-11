@@ -41,7 +41,7 @@ void StoreClustering(string outfname, Partition* final_clusters, Graph* graph, c
     out.exceptions(ofstream::badbit);
     out.open(outfname.c_str());
     if (!out) {
-        cerr << "Cannot open the output file.\n";
+        cerr << "Error. Cannot open the output file (" << outfname << "): " << strerror(errno) << endl;
         return;
     }
     const auto&  cls = *final_clusters->get_partition_vector();

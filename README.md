@@ -1,4 +1,4 @@
-# Randomized Greedy (RG) modularity clustering algorithm with Core Groups Graph ensemble Clustering Iterative (CGGC/CGGCi) scheme
+# Randomized Greedy (RG) modularity clustering algorithm with Core Groups Graph ensemble Clustering Iterative (CGGC/CGGCi) scheme, rgmc application
 
 The Paper: [An Ensemble Learning Strategy for Graph Clustering](http://www.cc.gatech.edu/dimacs10/papers/%5B18%5D-dimacs10_ovelgoennegeyerschulz.pdf)
 by Michael Ovelgönne and Andreas Geyer-Schulz at Graph Partitioning and
@@ -79,7 +79,7 @@ Supported Arguments:
 For example:
 ```
 $ rgmc --algorithm=2 --outfile=test.out test.graph
-runs the CGGCi_RG algorithm on the graph test.graph and writes the results to
+runs the CGGC_RG algorithm on the graph test.graph and writes the results to
 test.out
 ```
 or just `$ rgmc email.graph`.
