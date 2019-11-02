@@ -212,8 +212,6 @@ void Graph::loadNSL(ifstream& finp, bool directed)
 				}
 			}
 		}
-		// Get the following line to unify the payload processing
-		getline(finp, line);
 	}
 
 	// Preallocate containers if possible
