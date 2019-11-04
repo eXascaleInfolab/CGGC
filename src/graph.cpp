@@ -177,6 +177,7 @@ void Graph::loadNSL(ifstream& finp, bool directed)
 			break;
 
 		// 1. Replace the staring comment mark '#' with space to allow "#clusters:"
+		line[0] = ' ';
 		// 2. Replace ':' with space to allow "Clusters:<clsnum>"
 		for(size_t pos = 0; pos != string::npos; pos = line.find(':', pos + 1))
 			line[pos] = ' ';
